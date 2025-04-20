@@ -1,16 +1,9 @@
-import { hilog } from '@kit.PerformanceAnalysisKit';
-import { BackupExtensionAbility, BundleVersion } from '@kit.CoreFileKit';
+import ExtensionAbility from '@ohos.app.ability.ExtensionAbility';
+import hilog from '@ohos.hilog';
+import Want from '@ohos.app.ability.Want';
 
-const DOMAIN = 0x0000;
-
-export default class EntryBackupAbility extends BackupExtensionAbility {
-  async onBackup() {
-    hilog.info(DOMAIN, 'testTag', 'onBackup ok');
-    await Promise.resolve();
-  }
-
-  async onRestore(bundleVersion: BundleVersion) {
-    hilog.info(DOMAIN, 'testTag', 'onRestore ok %{public}s', JSON.stringify(bundleVersion));
-    await Promise.resolve();
+export default class EntryBackupAbility extends ExtensionAbility {
+  onCreate(want: Want): void {
+    hilog.info(0x0000, 'testTag', '%{public}s', 'BackupExtensionAbility onCreate, want: ' + want.abilityName);
   }
 }
