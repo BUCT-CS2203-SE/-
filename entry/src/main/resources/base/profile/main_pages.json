@@ -3,6 +3,11 @@
     "pages/Index",
     "pages/ArtifactDetail",
     "pages/ImageSearch",
-    "pages/LoginRegister"
+    "pages/Login",
+    "pages/Register",
+    "pages/Settings",
+    "pages/Favorites",
+    "pages/History",
+    "pages/Comments"
   ]
 }
