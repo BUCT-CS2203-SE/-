@@ -388,6 +388,55 @@ struct Index {
   }
   
   @Builder
+  buildProfileItem(title: string, icon: string) {
+    Row() {
+      Row() {
+        // 左侧图标
+        Image($r(`app.media.${icon}`))
+          .width(24)
+          .height(24)
+          .fillColor('#666666')
+        
+        // 标题文字
+        Text(title)
+          .fontSize(16)
+          .fontColor('#333333')
+          .margin({ left: 12 })
+      }
+      .layoutWeight(1)
+      .alignItems(VerticalAlign.Center)
+      
+      // 右侧箭头
+      Image($r('app.media.arrow_right'))
+        .width(20)
+        .height(20)
+        .fillColor('#999999')
+    }
+    .width('100%')
+    .padding({ top: 16, bottom: 16, left: 8, right: 8 })
+    .alignItems(VerticalAlign.Center)
+    .onClick(() => {
+      if (title === '设置') {
+        router.pushUrl({
+          url: 'pages/Settings'
+        });
+      } else if (title === '我的收藏') {
+        router.pushUrl({
+          url: 'pages/Favorites'
+        });
+      } else if (title === '浏览历史') {
+        router.pushUrl({
+          url: 'pages/History'
+        });
+      } else if (title === '我的评论') {
+        router.pushUrl({
+          url: 'pages/Comments'
+        });
+      }
+    })
+  }
+  
+  @Builder
   buildProfilePage() {
     Column() {
       Text('个人中心').fontSize(24).fontWeight(FontWeight.Bold).margin({ top: 20, bottom: 20 })
@@ -414,18 +463,18 @@ struct Index {
         .margin({ bottom: 20 })
         .onClick(() => {
           router.pushUrl({
-            url: 'pages/LoginRegister'
+            url: 'pages/Login'
           });
         })
         
         // 功能区域
         Column() {
-          this.buildProfileItem('我的收藏', 'favorite')
-          Divider().width('100%').height(1)
+          this.buildProfileItem('我的收藏', 'like')
+          Divider().width('100%').height(1).color('#F0F0F0')
           this.buildProfileItem('浏览历史', 'history')
-          Divider().width('100%').height(1)
+          Divider().width('100%').height(1).color('#F0F0F0')
           this.buildProfileItem('我的评论', 'comment')
-          Divider().width('100%').height(1)
+          Divider().width('100%').height(1).color('#F0F0F0')
           this.buildProfileItem('设置', 'settings')
         }
         .width('90%')
@@ -438,25 +487,5 @@ struct Index {
     .height('100%')
     .backgroundColor('#F0F0F0')
     .padding({ bottom: 56 })
-  }
-  
-  @Builder
-  buildProfileItem(title: string, icon: string) {
-    Row() {
-      Image($r(`app.media.${icon}`))
-        .width(24)
-        .height(24)
-      
-      Text(title)
-        .fontSize(16)
-        .margin({ left: 10 })
-        .layoutWeight(1)
-      
-      Image($r('app.media.arrow_right'))
-        .width(24)
-        .height(24)
-    }
-    .width('100%')
-    .padding({ top: 12, bottom: 12 })
   }
 }
