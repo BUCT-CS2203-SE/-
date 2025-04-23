@@ -3,6 +3,7 @@
     "pages/Index",
     "pages/ArtifactDetail",
     "pages/ImageSearch",
-    "pages/LoginRegister"
+    "pages/LoginRegister",
+    "pages/Dynamic"
   ]
 }

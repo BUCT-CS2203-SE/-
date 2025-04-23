@@ -32,11 +32,17 @@ struct Index {
         }
         .tabBar(this.TabBuilder(2, '搜索', 'search'))
         
+        // 动态Tab
+        TabContent() {
+          this.buildDynamicPage()
+        }
+        .tabBar(this.TabBuilder(3, '动态', 'icon'))
+        
         // 我的Tab
         TabContent() {
           this.buildProfilePage()
         }
-        .tabBar(this.TabBuilder(3, '我的', 'person'))
+        .tabBar(this.TabBuilder(4, '我的', 'person'))
       }
       .width('100%')
       .height('100%')
@@ -215,6 +221,28 @@ struct Index {
         .onClick(() => {
           router.pushUrl({
             url: 'pages/ImageSearch'
+          });
+        })
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor('#F0F0F0')
+    .padding({ bottom: 56 })
+  }
+  
+  @Builder
+  buildDynamicPage() {
+    Column() {
+      Text('动态').fontSize(24).fontWeight(FontWeight.Bold).margin({ top: 20, bottom: 20 })
+      // 这里实现动态页面
+      Button('进入动态页面', { type: ButtonType.Normal })
+        .width('80%')
+        .height(50)
+        .backgroundColor('#1698CE')
+        .margin({ top: 20 })
+        .onClick(() => {
+          router.pushUrl({
+            url: 'pages/Dynamic'
           });
         })
     }
