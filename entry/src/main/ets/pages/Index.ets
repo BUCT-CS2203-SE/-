@@ -1,11 +1,18 @@
 import { Constants } from '../common/constants/Constants';
 import router from '@ohos.router';
 import { CategoryItem } from '../common/constants/Constants';
+import { Artifact } from '../model/ArtifactModel';
+import { ArtifactService } from '../services/ArtifactService';
+import prompt from '@ohos.prompt';
 
 @Entry
 @Component
 struct Index {
   @State currentIndex: number = 0;
+  @State searchKeyword: string = '';
+  @State searchResults: Artifact[] = [];
+  @State isLoading: boolean = false;
+  private artifactService: ArtifactService = new ArtifactService();
 
   build() {
     Column() {
@@ -185,43 +192,199 @@ struct Index {
   
   @Builder
   buildSearchPage() {
-    Column() {
-      Text('文物搜索').fontSize(24).fontWeight(FontWeight.Bold).margin({ top: 20, bottom: 20 })
-      // 这里实现搜索页面
-      Row() {
-        TextInput({ placeholder: '输入关键词搜索文物' })
-          .width('80%')
-          .height(40)
-          .backgroundColor('#FFFFFF')
-          .borderRadius(20)
-          .padding({ left: 15, right: 15 })
+    Stack() {
+      // 背景图片
+      Image($r('app.media.background2'))
+        .width('100%')
+        .height('100%')
+        .objectFit(ImageFit.Cover)
+        .opacity(0.1)
+
+      Column() {
+        Text('文物搜索')
+          .fontSize(24)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#8B0000')  // 深红色
+          .margin({ top: 20, bottom: 20 })
         
-        Image($r('app.media.search'))
-          .width(24)
-          .height(24)
-          .margin({ left: 10 })
+        // 搜索框
+        Row() {
+          TextInput({ placeholder: '输入关键词搜索文物' })
+            .width('80%')
+            .height(40)
+            .backgroundColor('#FFFFFF')
+            .borderRadius(20)
+            .padding({ left: 15, right: 15 })
+            .borderColor('#8B0000')
+            .borderWidth(1)
+            .onChange((value: string) => {
+              this.searchKeyword = value;
+            })
+          
+          Image($r('app.media.search'))
+            .width(24)
+            .height(24)
+            .margin({ left: 10 })
+            .fillColor('#8B0000')  // 深红色
+            .onClick(() => {
+              this.performSearch();
+            })
+        }
+        .width('90%')
+        .margin({ bottom: 20 })
+        
+        Divider()
+          .width('90%')
+          .color('#8B0000')  // 深红色
+          .margin({ top: 5, bottom: 5 })
+        
+        // 图像搜索按钮
+        Button('拍照搜索文物', { type: ButtonType.Normal })
+          .width('80%')
+          .height(50)
+          .backgroundColor('#8B0000')  // 深红色
+          .fontColor('#FFFFFF')
+          .borderRadius(25)
+          .margin({ top: 20 })
+          .onClick(() => {
+            router.pushUrl({
+              url: 'pages/ImageSearch'
+            });
+          })
+        
+        // 搜索结果区域
+        if (this.isLoading) {
+          Column() {
+            LoadingProgress()
+              .width(50)
+              .height(50)
+              .color('#8B0000')  // 深红色
+              .margin({ bottom: 20 })
+            
+            Text('正在搜索中...')
+              .fontSize(18)
+              .fontColor('#8B0000')  // 深红色
+              .margin({ bottom: 10 })
+            
+            Text('请稍候，我们正在为您查找相关文物')
+              .fontSize(14)
+              .fontColor('#666666')
+          }
+          .width('100%')
+          .height(200)
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor('#FFFFFF')
+          .borderRadius(15)
+          .shadow({ radius: 3, color: '#8B0000', offsetX: 0, offsetY: 2 })
+          .margin({ top: 20 })
+        } else if (this.searchResults.length > 0) {
+          Text('搜索结果')
+            .fontSize(20)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#8B0000')  // 深红色
+            .alignSelf(ItemAlign.Start)
+            .margin({ left: '5%', top: 20, bottom: 10 })
+          
+          List({ space: 10 }) {
+            ForEach(this.searchResults, (artifact: Artifact) => {
+              ListItem() {
+                Row() {
+                  Image(artifact.imageUrl || $r('app.media.placeholder'))
+                    .width(100)
+                    .height(100)
+                    .borderRadius(10)
+                    .objectFit(ImageFit.Cover)
+                    .border({ width: 1, color: '#8B0000' })  // 深红色边框
+                  
+                  Column() {
+                    Text(artifact.name)
+                      .fontSize(18)
+                      .fontWeight(FontWeight.Bold)
+                      .fontColor('#8B0000')  // 深红色
+                    
+                    Text(artifact.era)
+                      .fontSize(14)
+                      .fontColor('#666666')
+                      .margin({ top: 5 })
+                    
+                    Text(artifact.museum)
+                      .fontSize(14)
+                      .fontColor('#666666')
+                      .margin({ top: 5 })
+                  }
+                  .alignItems(HorizontalAlign.Start)
+                  .margin({ left: 15 })
+                  .layoutWeight(1)
+                }
+                .width('100%')
+                .padding(15)
+                .backgroundColor('#FFFFFF')
+                .borderRadius(15)
+                .border({ width: 1, color: '#8B0000' })  // 深红色边框
+                .shadow({ radius: 3, color: '#8B0000', offsetX: 0, offsetY: 2 })
+                .onClick(() => {
+                  router.pushUrl({
+                    url: 'pages/ArtifactDetail',
+                    params: { artifactId: artifact.id }
+                  });
+                })
+              }
+            })
+          }
+          .width('90%')
+          .layoutWeight(1)
+        } else if (this.searchKeyword) {
+          Column() {
+            Image($r('app.media.no_result'))
+              .width(100)
+              .height(100)
+              .margin({ bottom: 16 })
+              .fillColor('#8B0000')  // 深红色
+              
+            Text('抱歉，未找到相关文物')
+              .fontSize(18)
+              .fontColor('#8B0000')  // 深红色
+              .margin({ bottom: 10 })
+            
+            Text('请尝试使用其他关键词进行搜索')
+              .fontSize(14)
+              .fontColor('#666666')
+          }
+          .width('100%')
+          .height(200)
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor('#FFFFFF')
+          .borderRadius(15)
+          .border({ width: 1, color: '#8B0000' })  // 深红色边框
+          .shadow({ radius: 3, color: '#8B0000', offsetX: 0, offsetY: 2 })
+          .margin({ top: 20 })
+        }
       }
-      .width('90%')
-      .margin({ bottom: 20 })
-      
-      Divider().width('90%').margin({ top: 5, bottom: 5 })
-      
-      // 图像搜索按钮
-      Button('拍照搜索文物', { type: ButtonType.Normal })
-        .width('80%')
-        .height(50)
-        .backgroundColor('#1698CE')
-        .margin({ top: 20 })
-        .onClick(() => {
-          router.pushUrl({
-            url: 'pages/ImageSearch'
-          });
-        })
+      .width('100%')
+      .height('100%')
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F0F0F0')
+    .backgroundColor('#FFF5F5')  // 浅红色背景
     .padding({ bottom: 56 })
+  }
+  
+  private performSearch(): void {
+    if (!this.searchKeyword.trim()) {
+      prompt.showToast({ message: '请输入搜索关键词' });
+      return;
+    }
+    
+    this.isLoading = true;
+    this.artifactService.searchByKeyword(this.searchKeyword)
+      .then((artifacts: Artifact[]) => {
+        this.searchResults = artifacts;
+        this.isLoading = false;
+      })
+      .catch((error: Error) => {
+        this.isLoading = false;
+        prompt.showToast({ message: `搜索失败: ${error.message}` });
+      });
   }
   
   @Builder
