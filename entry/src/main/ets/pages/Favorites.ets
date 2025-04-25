@@ -1,4 +1,5 @@
 import router from '@ohos.router';
+import prompt from '@ohos.prompt';
 
 // 定义收藏项的接口
 interface FavoriteItem {
@@ -31,17 +32,25 @@ struct Favorites {
     // 可以添加更多收藏项
   ];
   @State filteredFavorites: FavoriteItem[] = this.favorites;
+  @State isLoading: boolean = false;
 
-  onSearchChange() {
-    if (this.searchText.trim() === '') {
+  // 执行搜索
+  performSearch() {
+    if (!this.searchText.trim()) {
       this.filteredFavorites = this.favorites;
-    } else {
+      return;
+    }
+
+    this.isLoading = true;
+    // 模拟API调用
+    setTimeout(() => {
       this.filteredFavorites = this.favorites.filter(item => 
         item.name.toLowerCase().includes(this.searchText.toLowerCase()) ||
         item.dynasty.toLowerCase().includes(this.searchText.toLowerCase()) ||
         item.museum.toLowerCase().includes(this.searchText.toLowerCase())
       );
-    }
+      this.isLoading = false;
+    }, 500);
   }
 
   build() {
@@ -71,14 +80,8 @@ struct Favorites {
 
       // 搜索框
       Row() {
-        Image($r('app.media.search'))
-          .width(24)
-          .height(24)
-          .fillColor('#666666')
-          .margin({ right: 8 })
-        
         TextInput({ placeholder: '搜索收藏的文物', text: this.searchText })
-          .width('85%')
+          .width('75%')
           .height(40)
           .backgroundColor('#F5F5F5')
           .placeholderColor('#999999')
@@ -86,20 +89,34 @@ struct Favorites {
           .fontSize(16)
           .padding({ left: 12, right: 12 })
           .type(InputType.Normal)
-          .inputFilter('^[\u4E00-\u9FA5A-Za-z0-9]+$')
-          .onSubmit((enterKey: EnterKeyType) => {
-            this.onSearchChange();
-          })
+          .textAlign(TextAlign.Start)
+          .caretColor('#8B1A1A')
           .onChange((value: string) => {
             this.searchText = value;
-            this.onSearchChange();
+          })
+        
+        Button('搜索', { type: ButtonType.Capsule })
+          .width('20%')
+          .height(40)
+          .backgroundColor('#8B1A1A')
+          .fontColor('#FFFFFF')
+          .margin({ left: 8 })
+          .onClick(() => {
+            this.performSearch();
           })
       }
       .width('90%')
       .margin({ top: 12, bottom: 12 })
       .padding({ left: 12, right: 12 })
-      .borderRadius(20)
-      .backgroundColor('#F5F5F5')
+
+      // 加载指示器
+      if (this.isLoading) {
+        LoadingProgress()
+          .width(50)
+          .height(50)
+          .color('#8B1A1A')
+          .margin({ top: 20 })
+      }
 
       // 收藏列表
       List() {
@@ -137,7 +154,6 @@ struct Favorites {
             .backgroundColor('#FFFFFF')
             .borderRadius(12)
             .onClick(() => {
-              // TODO: 跳转到文物详情页
               router.pushUrl({
                 url: 'pages/ArtifactDetail',
                 params: { id: item.id }
