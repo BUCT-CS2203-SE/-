@@ -16,7 +16,7 @@ struct Register {
   
   validateRegister(): boolean {
     if (!this.username.trim()) {
-      this.errorMsg = '用户名不能为空';
+      this.errorMsg = '电话号不能为空';
       return false;
     }
     if (!this.password) {
@@ -120,7 +120,7 @@ struct Register {
       // 表单区域
       Column() {
         // 用户名输入
-        TextInput({ placeholder: '请输入用户名', text: this.username })
+        TextInput({ placeholder: '请输入电话号', text: this.username })
           .width('100%')
           .height(50)
           .backgroundColor('#FFFFFF90')

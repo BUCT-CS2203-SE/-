@@ -26,6 +26,47 @@ struct Comments {
       commentTime: '2024-03-20 14:20'
     }
   ];
+  @State currentTab: number = 0; // 0: 藏品, 1: 朋友圈
+
+  @Builder
+  TabBuilder(index: number, name: string, count: number) {
+    Column() {
+      Text(name + ` (${count})`)
+        .fontSize(16)
+        .fontColor(this.currentTab === index ? '#8B1A1A' : '#666666')
+        .fontWeight(this.currentTab === index ? FontWeight.Bold : FontWeight.Normal)
+      
+      if (this.currentTab === index) {
+        Row()
+          .width(24)
+          .height(2)
+          .backgroundColor('#8B1A1A')
+          .margin({ top: 4 })
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .onClick(() => {
+      this.currentTab = index;
+    })
+  }
+
+  @Builder
+  EmptyStateBuilder() {
+    Column() {
+      Image($r('app.media.no_result'))
+        .width(120)
+        .height(120)
+        .margin({ top: 100, bottom: 16 })
+      
+      Text('暂无评论记录')
+        .fontSize(16)
+        .fontColor('#999999')
+    }
+    .width('100%')
+    .layoutWeight(1)
+  }
 
   @Builder
   CommentItemCard(item: CommentItem) {
@@ -93,32 +134,44 @@ struct Comments {
       .padding({ left: 16, right: 16 })
       .backgroundColor('#FFFFFF')
 
-      // 评论列表
-      if (this.commentList.length > 0) {
-        List() {
-          ForEach(this.commentList, (item: CommentItem) => {
-            ListItem() {
-              this.CommentItemCard(item)
-            }
-          })
+      // 导航栏
+      Row() {
+        Row() {
+          this.TabBuilder(0, '藏品', this.commentList.length)
         }
-        .width('90%')
         .layoutWeight(1)
-        .margin({ top: 16 })
+        
+        Row() {
+          this.TabBuilder(1, '朋友圈', 0)
+        }
+        .layoutWeight(1)
+      }
+      .width('100%')
+      .height(50)
+      .backgroundColor('#FFFFFF')
+      .padding({ left: 16, right: 16 })
+      .border({ width: { bottom: 0.5 }, color: '#E6E6E6' })
+
+      // 内容区域
+      if (this.currentTab === 0) {
+        // 藏品评论列表
+        if (this.commentList.length > 0) {
+          List() {
+            ForEach(this.commentList, (item: CommentItem) => {
+              ListItem() {
+                this.CommentItemCard(item)
+              }
+            })
+          }
+          .width('90%')
+          .layoutWeight(1)
+          .margin({ top: 16 })
+        } else {
+          this.EmptyStateBuilder()
+        }
       } else {
-        // 空状态展示
-        Column() {
-          Image($r('app.media.no_result'))
-            .width(120)
-            .height(120)
-            .margin({ top: 100, bottom: 16 })
-          
-          Text('暂无评论记录')
-            .fontSize(16)
-            .fontColor('#999999')
-        }
-        .width('100%')
-        .layoutWeight(1)
+        // 朋友圈评论（暂无记录）
+        this.EmptyStateBuilder()
       }
     }
     .width('100%')
