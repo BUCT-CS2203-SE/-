@@ -1,0 +1,103 @@
+import { router } from '@kit.ArkUI'
+
+// CulturalRelicList.ets
+@Entry
+@Component
+struct CulturalRelicList {
+  // 文物数据集合
+  @State culturalRelics: CulturalRelic[] = [
+    new CulturalRelic(1, "陶鹰鼎", "taoyading", "新石器时代", "仰韶文化代表器物..."),
+    new CulturalRelic(2, "彩绘鹳鱼石斧图陶缸", "caihui", "新石器时代", "迄今发现最早彩陶画..."),
+    new CulturalRelic(3, "彩陶人面鱼纹盆", "renmianyu", "仰韶文化", "半坡遗址典型器物..."),
+    new CulturalRelic(4, "网纹彩陶船形壶", "chuanxinghu", "新石器时代", "原始舟船造型陶器..."),
+    new CulturalRelic(5, "彩陶舞蹈纹盆", "wudaowen", "马家窑文化", "原始舞蹈图案代表..."),
+    new CulturalRelic(6, "彩陶贴塑人纹双系壶", "tierenshuangxihu", "新石器时代", "立体人像装饰陶器..."),
+    new CulturalRelic(7, "红山文化玉龙", "yulong", "红山文化", "中华第一龙..."),
+    new CulturalRelic(8, "大汶口文化象牙梳", "xiangyashu", "大汶口文化", "最早象牙雕刻品..."),
+    new CulturalRelic(9, "青花瓷", "qinghuaci", "元代", "景德镇青花瓷器..."),
+    new CulturalRelic(10, "青花碗", "qinghuawan", "明代", "官窑青花典型器...")
+  ]
+
+  build() {
+    Column() {
+      // 标题栏
+      Text('华夏瑰宝 - 文物精选')
+        .fontSize(26)
+        .fontColor(Color.White)
+        .fontWeight(FontWeight.Bold)
+        .backgroundColor('#3a5f82')
+        .width('100%')
+        .padding(20)
+
+      // 文物网格列表
+      Grid() {
+        ForEach(this.culturalRelics, (item: CulturalRelic) => {
+          GridItem() {
+            this.buildRelicItem(item)
+          }
+        })
+      }
+      .columnsTemplate('1fr 1fr') // 两列布局
+      .columnsGap(12)
+      .rowsGap(12)
+      .padding(12)
+    }
+    .backgroundColor('#f5f5f5')
+  }
+
+  // 单个文物项构建
+  @Builder
+  buildRelicItem(item: CulturalRelic) {
+    Column() {
+      Image($r(`app.media.${item.image}`))
+        .width('100%')
+        .aspectRatio(1)
+        .objectFit(ImageFit.Cover)
+        .borderRadius(8)
+        .shadow({
+          radius: 6,
+          color: Color.Gray,
+          offsetX: 2,
+          offsetY: 2
+        })
+
+      Text(item.name)
+        .fontSize(16)
+        .fontColor('#333')
+        .margin({ top: 8 })
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+      Text(item.era)
+        .fontSize(12)
+        .fontColor('#666')
+        .margin({ top: 4 })
+    }
+    .padding(8)
+    .backgroundColor(Color.White)
+    .borderRadius(12)
+    .onClick(() => {
+      router.pushUrl({
+        url: 'pages/RelicDetail',
+        params: { id: item.id }
+      })
+    })
+  }
+}
+
+// 文物数据模型
+class CulturalRelic {
+  id: number
+  name: string
+  image: string
+  era: string
+  description: string
+
+  constructor(id: number, name: string, image: string, era: string, description: string) {
+    this.id = id
+    this.name = name
+    this.image = image
+    this.era = era
+    this.description = description
+  }
+}
