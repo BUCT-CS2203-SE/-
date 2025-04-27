@@ -1,7 +1,8 @@
-import { User, Comment } from '../model/UserModel';
+import { User, UserComment } from '../model/UserModel';
 import { Constants } from '../common/constants/Constants';
 import http from '@ohos.net.http';
 import preferences from '@ohos.data.preferences';
+import { CommentService } from './CommentService';
 
 /**
  * API响应数据结构
@@ -239,7 +240,7 @@ export class UserService {
    * 获取文物评论
    * @param artifactId 文物ID
    */
-  getComments(artifactId: string): Promise<Comment[]> {
+  getComments(artifactId: string): Promise<UserComment[]> {
     return new Promise((resolve, reject) => {
       // 创建HTTP请求
       let httpRequest = http.createHttp();
@@ -254,8 +255,8 @@ export class UserService {
             // 解析响应数据
             try {
               const responseData = JSON.parse(data.result.toString()) as ApiResponse<CommentData[]>;
-              const comments: Comment[] = responseData.data.map((item: CommentData) => {
-                return new Comment(
+              const comments: UserComment[] = responseData.data.map((item: CommentData) => {
+                return new UserComment(
                   item.id,
                   item.userId,
                   item.username,
@@ -331,5 +332,11 @@ export class UserService {
         reject(`获取用户信息失败: ${err.message}`);
       });
     });
+  }
+
+  async getCommentsByUserId(userId: string): Promise<UserComment[]> {
+    const commentService = new CommentService();
+    const allComments = await commentService.getAllComments();
+    return allComments.filter(comment => comment.userId === userId);
   }
 } 

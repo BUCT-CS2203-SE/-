@@ -1,10 +1,10 @@
 import { Artifact } from '../model/ArtifactModel';
-import { Comment } from '../model/UserModel';
+import { UserComment } from '../model/UserModel';
 import { ArtifactService } from '../services/ArtifactService';
 import { UserService } from '../services/UserService';
 import { Constants, CategoryItem } from '../common/constants/Constants';
 import router from '@ohos.router';
-import prompt from '@ohos.prompt';
+import { ToastUtil } from '../utils/ToastUtil';
 
 interface RouterParams {
   artifactId: string;
@@ -21,12 +21,11 @@ interface ErrorWithMessage {
 @Component
 struct ArtifactDetail {
   @State artifact: Artifact = new Artifact('', '', '', '', '', '', 1, '', 0, 0);
-  @State comments: Comment[] = [];
+  @State comments: UserComment[] = [];
   @State isLoading: boolean = true;
   @State errorMsg: string = '';
   @State commentText: string = '';
   @State isLiked: boolean = false;
-  @State isFavorite: boolean = false;
   
   private artifactId: string = '';
   private artifactService: ArtifactService = new ArtifactService();
@@ -69,20 +68,20 @@ struct ArtifactDetail {
   
   submitComment() {
     if (!this.commentText.trim()) {
-      prompt.showToast({ message: '评论内容不能为空' });
+      ToastUtil.show('评论内容不能为空');
       return;
     }
     
     this.userService.addComment(this.artifactId, this.commentText)
       .then((success) => {
         if (success) {
-          prompt.showToast({ message: '评论成功' });
+          ToastUtil.show('评论成功');
           this.commentText = '';
           this.loadComments();
         }
       })
       .catch((err: ErrorWithMessage) => {
-        prompt.showToast({ message: `评论失败: ${err.message}` });
+        ToastUtil.show(`评论失败: ${err.message}`);
       });
   }
   
@@ -90,17 +89,11 @@ struct ArtifactDetail {
     this.isLiked = !this.isLiked;
     if (this.isLiked) {
       this.artifact.likes++;
-      prompt.showToast({ message: '点赞成功' });
+      ToastUtil.show('点赞成功');
     } else {
       this.artifact.likes--;
-      prompt.showToast({ message: '取消点赞' });
+      ToastUtil.show('取消点赞');
     }
-    // 实际项目中这里应该调用API
-  }
-  
-  toggleFavorite() {
-    this.isFavorite = !this.isFavorite;
-    prompt.showToast({ message: this.isFavorite ? '收藏成功' : '取消收藏' });
     // 实际项目中这里应该调用API
   }
   
@@ -194,6 +187,7 @@ struct ArtifactDetail {
                   Text(`${this.artifact.likes}`)
                     .fontSize(14)
                     .fontColor('#666666')
+                    .margin({ right: 16 })
                 }
               }
               .width('100%')
@@ -239,18 +233,19 @@ struct ArtifactDetail {
               
               // 评论列表
               if (this.comments.length > 0) {
-                ForEach(this.comments, (comment: Comment) => {
+                ForEach(this.comments, (comment: UserComment) => {
                   Column() {
                     Row() {
                       Image(comment.avatarUrl || $r('app.media.avatar_default'))
-                        .width(40)
-                        .height(40)
-                        .borderRadius(20)
+                        .width(24)
+                        .height(24)
+                        .borderRadius(12)
+                        .margin({ right: 8 })
                       
                       Column() {
                         Text(comment.username)
-                          .fontSize(16)
-                          .fontWeight(FontWeight.Bold)
+                          .fontSize(14)
+                          .fontWeight(FontWeight.Medium)
                         
                         Text(comment.createTime)
                           .fontSize(12)

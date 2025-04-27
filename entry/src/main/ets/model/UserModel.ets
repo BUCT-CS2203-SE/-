@@ -46,7 +46,7 @@ export class User {
 /**
  * 用户评论模型
  */
-export class Comment {
+export class UserComment {
   /**
    * 评论ID
    */
@@ -92,4 +92,32 @@ export class Comment {
     this.createTime = createTime;
     this.artifactId = artifactId;
   }
+}
+
+/**
+ * 评论接口
+ */
+export interface Comment {
+  id: string;          // 评论ID
+  postId: number;      // 所属动态ID
+  userId: string;      // 评论用户ID
+  username: string;    // 评论用户名
+  content: string;     // 评论内容
+  createTime: string;  // 评论时间
+}
+
+/**
+ * 动态接口
+ */
+export interface Post {
+  id: number;          // 动态ID
+  userId: string;      // 发布用户ID
+  username: string;    // 发布用户名
+  avatarUrl: string;   // 用户头像
+  content: string;     // 动态内容
+  createTime: string;  // 发布时间
+  likes: number;       // 点赞数
+  isLiked: boolean;    // 是否已点赞
+  images: string[];    // 图片列表
+  comments: Comment[]; // 评论列表
 } 
