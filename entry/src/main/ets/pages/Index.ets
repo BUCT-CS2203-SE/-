@@ -4,6 +4,7 @@ import { CategoryItem } from '../common/constants/Constants';
 import { Artifact } from '../model/ArtifactModel';
 import { ArtifactService } from '../services/ArtifactService';
 import prompt from '@ohos.prompt';
+import picker from '@ohos.file.picker';
 
 interface Post {
   id: number;
@@ -31,6 +32,8 @@ struct Index {
   @State isLoading: boolean = false;
   @State posts: Array<Post> = [];
   @State favoritePosts: Set<number> = new Set();
+  @State selectedImages: Resource[] = [];
+  @State newPostContent: string = '';
   private artifactService: ArtifactService = new ArtifactService();
 
   build() {
