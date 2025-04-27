@@ -1,5 +1,6 @@
 import { Constants } from '../common/constants/Constants';
 import router from '@ohos.router';
+import prompt from '@ohos.prompt';
 
 @Entry
 @Component
@@ -9,15 +10,32 @@ struct Dynamic {
   @State showCommentInput: boolean = false;
   @State currentPostId: number = -1;
   @State commentContent: string = '';
+  @State favoritePosts: Set<number> = new Set();
 
   @Builder
   PostBuilder(post: Post) {
     Column() {
-      // 用户信息
+      // 用户信息和发布时间
       Row() {
-        Text(post.username)
-          .fontSize(16)
-          .fontWeight(FontWeight.Bold)
+        // 用户头像
+        Image(post.avatarUrl || $r('app.media.icon'))
+          .width(40)
+          .height(40)
+          .borderRadius(20)
+          .margin({ right: 10 })
+        
+        Column() {
+          // 用户名
+          Text(post.username)
+            .fontSize(16)
+            .fontWeight(FontWeight.Bold)
+          
+          // 发布时间
+          Text(post.createTime)
+            .fontSize(12)
+            .fontColor('#999999')
+        }
+        .alignItems(HorizontalAlign.Start)
       }
       .width('100%')
       .justifyContent(FlexAlign.Start)
@@ -28,6 +46,27 @@ struct Dynamic {
         .fontSize(16)
         .width('100%')
         .margin({ bottom: 10 })
+
+      // 图片展示
+      if (post.images && post.images.length > 0) {
+        Grid() {
+          ForEach(post.images, (image: string) => {
+            GridItem() {
+              Image(image)
+                .width('100%')
+                .height('100%')
+                .objectFit(ImageFit.Cover)
+            }
+          })
+        }
+        .columnsTemplate('1fr 1fr 1fr')
+        .rowsTemplate('1fr 1fr 1fr')
+        .columnsGap(5)
+        .rowsGap(5)
+        .width('100%')
+        .height(300)
+        .margin({ bottom: 10 })
+      }
 
       // 操作栏
       Row() {
@@ -58,6 +97,23 @@ struct Dynamic {
           this.currentPostId = post.id;
           this.showCommentInput = true;
         })
+        .margin({ right: 20 })
+
+        // 收藏按钮
+        Row() {
+          Text(this.favoritePosts.has(post.id) ? '★' : '☆')
+            .fontSize(20)
+            .fontColor(this.favoritePosts.has(post.id) ? '#FFD700' : '#666666')
+        }
+        .onClick(() => {
+          if (this.favoritePosts.has(post.id)) {
+            this.favoritePosts.delete(post.id);
+            prompt.showToast({ message: '已取消收藏' });
+          } else {
+            this.favoritePosts.add(post.id);
+            prompt.showToast({ message: '已收藏' });
+          }
+        })
       }
       .width('100%')
       .justifyContent(FlexAlign.Start)
@@ -71,6 +127,7 @@ struct Dynamic {
               Text(comment.username)
                 .fontSize(14)
                 .fontWeight(FontWeight.Bold)
+                .fontColor('#1698CE')
               Text(comment.content)
                 .fontSize(14)
                 .margin({ left: 5 })
@@ -117,9 +174,12 @@ struct Dynamic {
               this.posts.unshift({
                 id: this.posts.length + 1,
                 username: '当前用户',
+                avatarUrl: '',
                 content: this.newPostContent,
+                createTime: new Date().toLocaleString(),
                 likes: 0,
                 isLiked: false,
+                images: [],
                 comments: []
               });
               this.newPostContent = '';
@@ -187,9 +247,12 @@ struct Dynamic {
 interface Post {
   id: number;
   username: string;
+  avatarUrl: string;
   content: string;
+  createTime: string;
   likes: number;
   isLiked: boolean;
+  images: string[];
   comments: Array<Comment>;
 }
 

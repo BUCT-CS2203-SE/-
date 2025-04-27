@@ -31,6 +31,8 @@ interface ArtifactData {
  * 文物服务类
  */
 export class ArtifactService {
+  private baseUrl: string = 'http://your-api-base-url'; // 替换为实际的API地址
+
   /**
    * 获取文物列表
    * @param categoryId 类别ID，可选
@@ -136,12 +138,12 @@ export class ArtifactService {
    * 搜索文物
    * @param keyword 搜索关键词
    */
-  searchArtifacts(keyword: string): Promise<Artifact[]> {
+  searchByKeyword(keyword: string): Promise<Artifact[]> {
     return new Promise((resolve, reject) => {
       // 创建HTTP请求
       let httpRequest = http.createHttp();
       httpRequest.request(
-        `${Constants.BASE_URL}/artifacts/search?keyword=${encodeURIComponent(keyword)}`,
+        `${this.baseUrl}/artifacts/search?keyword=${encodeURIComponent(keyword)}`,
         {
           method: http.RequestMethod.GET,
           header: { 'Content-Type': 'application/json' }
