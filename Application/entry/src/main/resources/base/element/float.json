@@ -1,0 +1,36 @@
+{
+  "float": [
+    {
+      "name": "page_text_font_size",
+      "value": "16fp"
+    },
+    {
+      "name": "title_text_font_size",
+      "value": "20fp"
+    },
+    {
+      "name": "subtitle_text_font_size",
+      "value": "16fp"
+    },
+    {
+      "name": "small_text_font_size",
+      "value": "12fp"
+    },
+    {
+      "name": "item_margin_xs",
+      "value": "4vp"
+    },
+    {
+      "name": "item_margin_sm",
+      "value": "8vp"
+    },
+    {
+      "name": "item_margin_md",
+      "value": "16vp"
+    },
+    {
+      "name": "item_margin_lg",
+      "value": "24vp"
+    }
+  ]
+}
