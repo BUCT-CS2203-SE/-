@@ -1,0 +1,10 @@
+components:
+- name: clouddb
+  properties:
+    zoneNames:
+    - Museum
+    description: clouddb
+    codeUri: clouddb.zip
+  type: Huawei::AGC::CloudDB
+name: MyApplicationclouddb
+type: Application

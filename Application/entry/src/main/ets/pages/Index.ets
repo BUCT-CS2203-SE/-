@@ -6,6 +6,9 @@ import { ArtifactService } from '../services/ArtifactService';
 import prompt from '@ohos.prompt';
 import picker from '@ohos.file.picker';
 
+/**
+ * 动态帖子接口
+ */
 interface Post {
   id: number;
   username: string;
@@ -18,9 +21,20 @@ interface Post {
   comments: Array<Comment>;
 }
 
+/**
+ * 评论接口
+ */
 interface Comment {
   username: string;
   content: string;
+}
+
+/**
+ * Sheet项目接口
+ */
+interface Sheet {
+  title: string;
+  action: () => void;
 }
 
 @Entry
@@ -34,6 +48,9 @@ struct Index {
   @State favoritePosts: Set<number> = new Set();
   @State selectedImages: Resource[] = [];
   @State newPostContent: string = '';
+  @State artifacts: Artifact[] = [];
+  @State isArtifactsLoading: boolean = false;
+  @State selectedCategory: CategoryItem = { id: 0, name: '全部' };
   private artifactService: ArtifactService = new ArtifactService();
 
   build() {
@@ -209,8 +226,156 @@ struct Index {
   buildArtifactsPage() {
     Column() {
       Text('文物展示').fontSize(24).fontWeight(FontWeight.Bold).margin({ top: 20, bottom: 20 })
-      // 这里实现文物展示页面
-      Text('文物展示页面内容').fontSize(16)
+      
+      // 添加分类选择器
+      Row() {
+        Text('分类：').fontSize(16).fontColor('#666666')
+        
+        Row() {
+          Text(this.selectedCategory.name)
+            .fontSize(16)
+            .fontColor('#1698CE')
+            .layoutWeight(1)
+          
+          Image($r('app.media.arrow_right'))
+            .width(20)
+            .height(20)
+            .fillColor('#1698CE')
+            .margin({ left: 5 })
+        }
+        .width('80%')
+        .height(40)
+        .borderRadius(20)
+        .backgroundColor('#F5F5F5')
+        .padding({ left: 15, right: 15 })
+        .justifyContent(FlexAlign.SpaceBetween)
+        .onClick(() => {
+          ActionSheet.show({
+            title: '选择分类',
+            message: '请选择您想要查看的文物分类',
+            sheets: Constants.ARTIFACT_CATEGORIES.map((item): Sheet => ({
+              title: item.name,
+              action: () => {
+                this.selectedCategory = item;
+                this.loadArtifacts();
+              }
+            }))
+          });
+        })
+      }
+      .width('90%')
+      .margin({ bottom: 20 })
+      
+      // 加载状态
+      if (this.isArtifactsLoading) {
+        Column() {
+          LoadingProgress()
+            .width(50)
+            .height(50)
+            .color('#1698CE')
+          
+          Text('正在加载文物数据...')
+            .fontSize(16)
+            .margin({ top: 10 })
+        }
+        .width('100%')
+        .height(300)
+        .justifyContent(FlexAlign.Center)
+      } 
+      // 文物列表
+      else if (this.artifacts.length > 0) {
+        Grid() {
+          ForEach(this.artifacts, (artifact: Artifact) => {
+            GridItem() {
+              Column() {
+                // 文物图片
+                Stack() {
+                  Image(artifact.imageUrl || $r('app.media.placeholder'))
+                    .width('100%')
+                    .height(180)
+                    .objectFit(ImageFit.Cover)
+                    .borderRadius({ topLeft: 8, topRight: 8 })
+                  
+                  Row() {
+                    Text(artifact.museum)
+                      .fontSize(12)
+                      .fontColor('#FFFFFF')
+                      .backgroundColor('#00000080')
+                      .borderRadius(10)
+                      .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+                  }
+                  .position({ x: 5, y: 5 })
+                }
+                .width('100%')
+                
+                // 文物信息
+                Column() {
+                  Text(artifact.name)
+                    .fontSize(16)
+                    .fontWeight(FontWeight.Bold)
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                    .width('100%')
+                  
+                  Row() {
+                    Text(`${artifact.era}`)
+                      .fontSize(14)
+                      .fontColor('#666666')
+                      .layoutWeight(1)
+                    
+                    Row() {
+                      Image($r('app.media.like'))
+                        .width(16)
+                        .height(16)
+                        .fillColor('#666666')
+                      
+                      Text(`${artifact.likes}`)
+                        .fontSize(12)
+                        .fontColor('#666666')
+                        .margin({ left: 2 })
+                    }
+                  }
+                  .width('100%')
+                  .margin({ top: 5 })
+                }
+                .width('100%')
+                .padding(10)
+              }
+              .width('100%')
+              .backgroundColor('#FFFFFF')
+              .borderRadius(8)
+              .onClick(() => {
+                router.pushUrl({
+                  url: 'pages/ArtifactDetail',
+                  params: { artifactId: artifact.id }
+                });
+              })
+            }
+            .aspectRatio(0.75)  // 宽高比
+          })
+        }
+        .columnsTemplate('1fr 1fr')  // 两列布局
+        .columnsGap(10)  // 列间距
+        .rowsGap(10)  // 行间距
+        .width('90%')
+        .layoutWeight(1)
+      } 
+      // 无数据状态
+      else {
+        Column() {
+          Image($r('app.media.no_result'))
+            .width(100)
+            .height(100)
+            .margin({ bottom: 20 })
+          
+          Text('暂无文物数据')
+            .fontSize(16)
+            .fontColor('#999999')
+        }
+        .width('100%')
+        .height(300)
+        .justifyContent(FlexAlign.Center)
+      }
     }
     .width('100%')
     .height('100%')
@@ -746,5 +911,24 @@ struct Index {
         ]
       }
     ];
+
+    // 加载文物数据
+    this.loadArtifacts();
+  }
+
+  // 添加加载文物方法
+  private loadArtifacts() {
+    this.isArtifactsLoading = true;
+    
+    const categoryId = this.selectedCategory.id === 0 ? undefined : this.selectedCategory.id;
+    this.artifactService.getArtifactList(categoryId, 1, 20)
+      .then((artifacts) => {
+        this.artifacts = artifacts;
+        this.isArtifactsLoading = false;
+      })
+      .catch((err: Error) => {
+        console.error('加载文物失败:', err);
+        this.isArtifactsLoading = false;
+      });
   }
 }

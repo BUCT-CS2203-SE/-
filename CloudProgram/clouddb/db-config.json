@@ -1,4 +1,6 @@
 {
 	"defaultCloudDBZoneName": "default",
-	"defaultDataStorageLocation": "CN"
+	"defaultDataStorageLocation": "CN",
+	"zoneName": "Museum",
+	"syncZones": []
 }
