@@ -1,0 +1,21 @@
+{
+    "name": "artifact-service",
+    "version": "1.0.0",
+    "description": "文物服务云函数",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "build": "tsc"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "@agconnect/database-server": "^1.0.7"
+    },
+    "devDependencies": {
+        "@types/node": "^18.11.11",
+        "typescript": "^5.4.2"
+    },
+    "publishConfig": {
+        "registry": "https://repo.huaweicloud.com/repository/npm/"
+    }
+}

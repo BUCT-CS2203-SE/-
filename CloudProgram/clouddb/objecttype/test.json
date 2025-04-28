@@ -1,0 +1,23 @@
+{
+  "objectTypeName": "test",
+  "fields": [
+    {"fieldName": "field1", "fieldType": "Integer", "notNull": true, "belongPrimaryKey": true},
+    {"fieldName": "field2", "fieldType": "Integer", "notNull": true, "defaultValue": 0},
+    {"fieldName": "field3", "fieldType": "String"},
+    {"fieldName": "field4", "fieldType": "Text"},
+    {"fieldName": "field5", "fieldType": "Boolean"},
+    {"fieldName": "field6", "fieldType": "Float"},
+    {"fieldName": "field7", "fieldType": "ByteArray"},
+    {"fieldName": "field8", "fieldType": "Date"}
+  ],
+  "indexes": [
+    {"indexName": "field1Index", "indexList": [{"fieldName":"field1","sortType":"ASC"}]},
+    {"indexName": "field2Index", "indexList": [{"fieldName":"field2","sortType":"DESC"}]}
+  ],
+  "permissions": [
+    {"role": "World", "rights": ["Read"]},
+    {"role": "Authenticated", "rights": ["Read", "Upsert"]},
+    {"role": "Creator", "rights": ["Read", "Upsert", "Delete"]},
+    {"role": "Administrator", "rights": ["Read", "Upsert", "Delete"]}
+  ]
+}

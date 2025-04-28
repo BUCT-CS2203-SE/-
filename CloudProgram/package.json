@@ -1,0 +1,21 @@
+{
+  "name": "cloud-program",
+  "version": "1.0.0",
+  "private": true,
+  "description": "add shared dependencies for cloud functions",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy:clouddb": "agc clouddb deploy",
+    "deploy:cloudfunc": "agc function deploy",
+    "deploy": "npm run deploy:clouddb && npm run deploy:cloudfunc"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^18.11.11",
+    "typescript": "^5.4.2"
+  },
+  "publishConfig": {
+    "registry": "https://repo.huaweicloud.com/repository/npm/"
+  }
+}

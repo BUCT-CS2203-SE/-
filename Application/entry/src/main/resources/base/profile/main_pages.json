@@ -1,0 +1,14 @@
+{
+  "src": [
+    "pages/Index",
+    "pages/ArtifactDetail",
+    "pages/ImageSearch",
+    "pages/Login",
+    "pages/Register",
+    "pages/Settings",
+    "pages/Favorites",
+    "pages/History",
+    "pages/Comments",
+    "pages/Dynamic"
+  ]
+}
