@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-    <title>list</title>
-    <g id="icon" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
-        <path d="M3,13 L5,13 L5,11 L3,11 L3,13 Z M3,17 L5,17 L5,15 L3,15 L3,17 Z M3,9 L5,9 L5,7 L3,7 L3,9 Z M7,13 L21,13 L21,11 L7,11 L7,13 Z M7,17 L21,17 L21,15 L7,15 L7,17 Z M7,7 L7,9 L21,9 L21,7 L7,7 Z" id="Shape" fill="#333333"></path>
-    </g>
-</svg> 
