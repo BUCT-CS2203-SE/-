@@ -1,15 +1,63 @@
 import { Artifact } from '../model/ArtifactModel';
 import { Constants } from '../common/constants/Constants';
 import { importObject, ArtifactService as CloudArtifactService, ArtifactData, CommentData } from 'cloud_objects';
-import '@agconnect/api';
-import '@agconnect/database';
 
-// 导入AGConnect SDK
-try {
-  var agconnect = require('@agconnect/api');
-  require('@agconnect/database');
-} catch (e) {
-  console.error('加载 AGConnect SDK 失败:', e);
+// 定义华为云数据库相关接口
+interface CloudDBZone {
+  collection(name: string): CloudDBCollection;
+  openCloudDBZone(name: string): void;
+}
+
+interface CloudDBCollection {
+  where(condition: string, value: string | number): CloudDBCollection;
+  or(): CloudDBCollection;
+  orderBy(field: string, order: 'asc' | 'desc'): CloudDBCollection;
+  skip(count: number): CloudDBCollection;
+  limit(count: number): CloudDBCollection;
+  get(): Promise<CloudDBResult | CommentDBResult>;
+}
+
+interface CloudDBResult {
+  data: ArtifactData[];
+}
+
+interface CommentDBResult {
+  data: CommentData[];
+}
+
+interface CloudDB {
+  openCloudDBZone(name: string): void;
+  collection(name: string): CloudDBCollection;
+}
+
+interface AGConnect {
+  cloudDB(): CloudDB;
+}
+
+// 扩展 ArtifactData 接口
+interface ExtendedArtifactData extends ArtifactData {
+  width?: number;
+  height?: number;
+}
+
+// 定义云对象响应接口
+interface CloudServiceResponse {
+  artifacts: ExtendedArtifactData[];
+}
+
+// 定义云服务请求参数接口
+interface ArtifactListParams {
+  categoryId?: number;
+  page: number;
+  pageSize: number;
+}
+
+// 定义云服务接口
+interface CloudArtifactServiceInterface {
+  getArtifactList(params: ArtifactListParams): Promise<CloudServiceResponse>;
+  getArtifactDetail(id: string): Promise<ExtendedArtifactData>;
+  searchArtifacts(keyword: string): Promise<ExtendedArtifactData[]>;
+  getArtifactComments(artifactId: string): Promise<CommentData[]>;
 }
 
 /**
@@ -25,8 +73,8 @@ interface ApiResponse<T> {
  * 文物服务类，用于处理文物相关的业务逻辑
  */
 export class ArtifactService {
-  private cloudService: CloudArtifactService;
-  private agcDb: any; // AGC云数据库客户端
+  private cloudService: CloudArtifactServiceInterface = importObject(CloudArtifactService) as CloudArtifactServiceInterface;
+  private agcDb: CloudDB | null = null;
   
   // 模拟数据，作为云服务调用失败时的兜底
   private mockArtifacts: Artifact[] = [
@@ -94,10 +142,8 @@ export class ArtifactService {
   
   constructor() {
     try {
-      // 导入云对象
-      this.cloudService = importObject(CloudArtifactService);
-      
       // 初始化AGC云数据库
+      const agconnect = globalThis.agconnect as AGConnect;
       if (agconnect && agconnect.cloudDB) {
         this.agcDb = agconnect.cloudDB();
         // 打开云数据库区域
@@ -111,7 +157,7 @@ export class ArtifactService {
         console.warn('AGC云数据库初始化失败: cloudDB 不可用');
       }
     } catch (err) {
-      console.error('初始化失败:', err);
+      console.error('初始化失败:', err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -124,24 +170,21 @@ export class ArtifactService {
   async getArtifactList(categoryId?: number, page: number = 1, pageSize: number = 10): Promise<Artifact[]> {
     try {
       if (this.agcDb) {
-        // 使用AGC云数据库查询
         const query = this.agcDb.collection('Artifact');
         if (categoryId !== undefined) {
           query.where('categoryId == ?', categoryId);
         }
         
-        // 设置分页
         const startIndex = (page - 1) * pageSize;
         query.skip(startIndex).limit(pageSize);
         
-        // 执行查询
         const result = await query.get();
         if (result && result.data && result.data.length > 0) {
-          return result.data.map(item => this.convertToArtifact(item));
+          const artifactData = (result as CloudDBResult).data;
+          return artifactData.map(item => this.convertToArtifact(item as ExtendedArtifactData));
         }
       }
       
-      // 尝试使用云对象
       try {
         const result = await this.cloudService.getArtifactList({
           categoryId: categoryId,
@@ -150,10 +193,9 @@ export class ArtifactService {
         });
         return this.convertToArtifacts(result.artifacts);
       } catch (cloudErr) {
-        console.warn('云对象获取文物列表失败，使用模拟数据:', cloudErr);
+        console.warn('云对象获取文物列表失败，使用模拟数据:', cloudErr instanceof Error ? cloudErr.message : String(cloudErr));
       }
       
-      // 兜底返回模拟数据
       console.info('使用模拟数据（文物列表）');
       let filteredArtifacts = this.mockArtifacts;
       if (categoryId !== undefined) {
@@ -162,9 +204,7 @@ export class ArtifactService {
       const startIdx = (page - 1) * pageSize;
       return filteredArtifacts.slice(startIdx, startIdx + pageSize);
     } catch (err) {
-      console.error('获取文物列表失败:', err);
-      // 返回模拟数据作为兜底方案
-      console.info('使用模拟数据（文物列表）');
+      console.error('获取文物列表失败:', err instanceof Error ? err.message : String(err));
       return this.mockArtifacts;
     }
   }
@@ -180,14 +220,14 @@ export class ArtifactService {
         const query = this.agcDb.collection('Artifact').where('id == ?', id);
         const result = await query.get();
         if (result && result.data && result.data.length > 0) {
-          return this.convertToArtifact(result.data[0]);
+          return this.convertToArtifact(result.data[0] as ExtendedArtifactData);
         }
       }
       
       // 尝试使用云对象
       try {
         const artifactData = await this.cloudService.getArtifactDetail(id);
-        return this.convertToArtifact(artifactData);
+        return this.convertToArtifact(artifactData as ExtendedArtifactData);
       } catch (cloudErr) {
         console.warn('云对象获取文物详情失败，使用模拟数据:', cloudErr);
       }
@@ -225,7 +265,8 @@ export class ArtifactService {
         
         const result = await query.get();
         if (result && result.data && result.data.length > 0) {
-          return result.data.map(item => this.convertToArtifact(item));
+          const artifactData = (result as CloudDBResult).data;
+          return artifactData.map(item => this.convertToArtifact(item as ExtendedArtifactData));
         }
       }
       
@@ -234,7 +275,7 @@ export class ArtifactService {
         const artifacts = await this.cloudService.searchArtifacts(keyword);
         return this.convertToArtifacts(artifacts);
       } catch (cloudErr) {
-        console.warn('云对象搜索文物失败，使用模拟数据:', cloudErr);
+        console.warn('云对象搜索文物失败，使用模拟数据:', cloudErr instanceof Error ? cloudErr.message : String(cloudErr));
       }
       
       // 兜底返回模拟数据
@@ -246,7 +287,7 @@ export class ArtifactService {
         item.era.includes(keyword)
       );
     } catch (err) {
-      console.error('搜索文物失败:', err);
+      console.error('搜索文物失败:', err instanceof Error ? err.message : String(err));
       // 返回模拟数据作为兜底方案
       return this.mockArtifacts;
     }
@@ -263,19 +304,17 @@ export class ArtifactService {
 
   /**
    * 获取文物评论
-   * @param artifactId 文物ID
    */
   async getArtifactComments(artifactId: string): Promise<CommentData[]> {
     try {
       if (this.agcDb) {
-        // 使用AGC云数据库查询
         const query = this.agcDb.collection('Comment')
           .where('artifactId == ?', artifactId)
           .orderBy('createTimestamp', 'desc');
         
         const result = await query.get();
-        if (result && result.data && result.data.length > 0) {
-          return result.data;
+        if (result && result.data && Array.isArray(result.data) && result.data.length > 0) {
+          return (result as CommentDBResult).data;
         }
       }
       
@@ -283,11 +322,11 @@ export class ArtifactService {
       try {
         return await this.cloudService.getArtifactComments(artifactId);
       } catch (cloudErr) {
-        console.warn('云对象获取文物评论失败，使用模拟数据:', cloudErr);
+        console.warn('云对象获取文物评论失败，使用模拟数据:', cloudErr instanceof Error ? cloudErr.message : String(cloudErr));
       }
       
-      // 兜底返回模拟数据
-      console.info('使用模拟数据（文物评论）');
+      // 返回模拟数据
+      const currentDate = new Date();
       return [
         {
           id: '1',
@@ -296,60 +335,45 @@ export class ArtifactService {
           username: '文物爱好者',
           avatarUrl: 'https://example.com/avatar1.jpg',
           content: '这件文物保存非常完好，令人惊叹！',
-          createTime: '2023-10-15 14:30:25',
-          createTimestamp: 1697370625000
-        },
-        {
-          id: '2',
-          artifactId: artifactId,
-          userId: 'user2',
-          username: '历史研究者',
-          avatarUrl: 'https://example.com/avatar2.jpg',
-          content: '从工艺上看，这件文物代表了当时最高的制作水平。',
-          createTime: '2023-10-14 09:15:40',
-          createTimestamp: 1697265340000
+          createTime: currentDate.toISOString(),
+          createTimestamp: currentDate
         }
       ];
     } catch (err) {
-      console.error('获取文物评论失败:', err);
-      // 返回模拟数据作为兜底方案
-      return [
-        {
-          id: '1',
-          artifactId: artifactId,
-          userId: 'user1',
-          username: '文物爱好者',
-          avatarUrl: 'https://example.com/avatar1.jpg',
-          content: '这件文物保存非常完好，令人惊叹！',
-          createTime: '2023-10-15 14:30:25',
-          createTimestamp: 1697370625000
-        }
-      ];
+      console.error('获取文物评论失败:', err instanceof Error ? err.message : String(err));
+      return [];
     }
   }
   
   /**
-   * 将云对象数据转换为应用模型
+   * 将数据库对象转换为Artifact对象
    */
-  private convertToArtifact(item: ArtifactData): Artifact {
+  private convertToArtifact(data: ExtendedArtifactData): Artifact {
     return new Artifact(
-      item.id,
-      item.name,
-      item.era,
-      item.museum,
-      item.description,
-      item.imageUrl,
-      item.categoryId,
-      item.detailUrl,
-      item.likes,
-      item.comments
+      data.id,
+      data.name,
+      data.era,
+      data.museum,
+      data.description,
+      data.imageUrl,
+      data.categoryId,
+      data.detailUrl,
+      data.width ?? 0,
+      data.height ?? 0
     );
   }
   
   /**
-   * 将云对象数据数组转换为应用模型数组
+   * 将数据库对象数组转换为Artifact对象数组
    */
-  private convertToArtifacts(items: ArtifactData[]): Artifact[] {
-    return items.map(item => this.convertToArtifact(item));
+  private convertToArtifacts(data: ExtendedArtifactData[]): Artifact[] {
+    return data.map(item => this.convertToArtifact(item));
+  }
+
+  /**
+   * 将时间戳转换为Date对象
+   */
+  private convertTimestampToDate(timestamp: number): Date {
+    return new Date(timestamp);
   }
 } 
