@@ -3,7 +3,7 @@ import router from '@ohos.router';
 import { CategoryItem } from '../common/constants/Constants';
 import { Artifact } from '../model/ArtifactModel';
 import { ArtifactService } from '../services/ArtifactService';
-import prompt from '@ohos.prompt';
+import promptAction from '@ohos.promptAction';
 import picker from '@ohos.file.picker';
 
 interface Post {
@@ -399,7 +399,7 @@ struct Index {
   
   private performSearch(): void {
     if (!this.searchKeyword.trim()) {
-      prompt.showToast({ message: '请输入搜索关键词' });
+      promptAction.showToast({ message: '请输入搜索关键词' });
       return;
     }
     
@@ -411,7 +411,7 @@ struct Index {
       })
       .catch((error: Error) => {
         this.isLoading = false;
-        prompt.showToast({ message: `搜索失败: ${error.message}` });
+        promptAction.showToast({ message: `搜索失败: ${error.message}` });
       });
   }
   
@@ -604,10 +604,10 @@ struct Index {
         .onClick(() => {
           if (this.favoritePosts.has(post.id)) {
             this.favoritePosts.delete(post.id);
-            prompt.showToast({ message: '已取消收藏' });
+            promptAction.showToast({ message: '已取消收藏' });
           } else {
             this.favoritePosts.add(post.id);
-            prompt.showToast({ message: '已收藏' });
+            promptAction.showToast({ message: '已收藏' });
           }
         })
       }

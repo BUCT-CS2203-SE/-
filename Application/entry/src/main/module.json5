@@ -61,9 +61,6 @@
       },
       {
         "name": "ohos.permission.MEDIA_LOCATION"
-      },
-      {
-        "name": "ohos.permission.READ_MEDIA_IMAGES"
       }
     ]
   }

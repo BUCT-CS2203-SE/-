@@ -11,6 +11,14 @@
     {
       "name": "EntryAbility_label",
       "value": "label"
+    },
+    {
+      "name": "camera_permission_reason",
+      "value": "需要相机权限进行拍照和图片识别功能"
+    },
+    {
+      "name": "media_permission_reason",
+      "value": "需要媒体访问权限来获取相册中的图片"
     }
   ]
 }
