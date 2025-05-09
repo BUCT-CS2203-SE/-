@@ -1,0 +1,247 @@
+{
+  "ohos-module-entry": {
+    "SELECT_TARGET": "default",
+    "MODULE_BUILD_DIR": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build",
+    "DEPENDENCY_INFO": {
+      "cloud_objects": "E:\\github\\Team4-HandHeld-Museum\\Application\\cloud_objects"
+    },
+    "TARGETS": {
+      "default": {
+        "SOURCE_ROOT": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\src\\main",
+        "RESOURCES_PATH": [
+          "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\src\\main\\resources"
+        ],
+        "BUILD_PATH": {
+          "OUTPUT_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\outputs\\default",
+          "INTERMEDIA_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\intermediates",
+          "JS_ASSETS_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\intermediates\\loader_out\\default",
+          "JS_LITE_ASSETS_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\intermediates\\loader_out_lite\\default",
+          "RES_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\intermediates\\res\\default",
+          "RES_PROFILE_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\intermediates\\res\\default\\resources\\base\\profile",
+          "ETS_SUPER_VISUAL_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\cache\\default\\default@CompileArkTS\\esmodule",
+          "JS_SUPER_VISUAL_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\cache\\default\\default@CompileJS\\jsbundle",
+          "WORKER_LOADER": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\intermediates\\loader\\default\\loader.json",
+          "MANIFEST_JSON": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\intermediates\\manifest\\default",
+          "OUTPUT_METADATA_JSON": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\intermediates\\hap_metadata\\default\\output_metadata.json",
+          "SOURCE_MAP_DIR": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\intermediates\\source_map\\default"
+        },
+        "BUILD_OPTION": {
+          "debuggable": true
+        }
+      },
+      "ohosTest": {
+        "SOURCE_ROOT": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\src\\ohosTest",
+        "RESOURCES_PATH": [
+          "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\src\\ohosTest\\resources"
+        ],
+        "BUILD_PATH": {
+          "OUTPUT_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\outputs\\ohosTest",
+          "INTERMEDIA_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\intermediates",
+          "JS_ASSETS_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\intermediates\\loader_out\\ohosTest",
+          "JS_LITE_ASSETS_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\intermediates\\loader_out_lite\\ohosTest",
+          "RES_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\intermediates\\res\\ohosTest",
+          "RES_PROFILE_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\intermediates\\res\\ohosTest\\resources\\base\\profile",
+          "ETS_SUPER_VISUAL_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\cache\\ohosTest\\ohosTest@OhosTestCompileArkTS\\esmodule",
+          "JS_SUPER_VISUAL_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\cache\\ohosTest\\ohosTest@OhosTestCompileJS\\jsbundle",
+          "WORKER_LOADER": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\intermediates\\loader\\ohosTest\\loader.json",
+          "MANIFEST_JSON": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\intermediates\\manifest\\ohosTest",
+          "OUTPUT_METADATA_JSON": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\intermediates\\hap_metadata\\ohosTest\\output_metadata.json",
+          "SOURCE_MAP_DIR": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry\\build\\default\\intermediates\\source_map\\ohosTest"
+        },
+        "BUILD_OPTION": {
+          "debuggable": true
+        }
+      }
+    },
+    "BUILD_OPTION": {
+      "default-default": {
+        "debuggable": true,
+        "copyFrom": "default",
+        "strictMode": {
+          "caseSensitiveCheck": true,
+          "useNormalizedOHMUrl": true
+        },
+        "name": "debug"
+      }
+    },
+    "BUILD_PROFILE_OPT": {
+      "apiType": "stageMode",
+      "buildOption": {},
+      "buildOptionSet": [
+        {
+          "name": "release",
+          "arkOptions": {
+            "obfuscation": {
+              "ruleOptions": {
+                "enable": false,
+                "files": [
+                  "./obfuscation-rules.txt"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "name": "default"
+        },
+        {
+          "name": "debug"
+        }
+      ],
+      "targets": [
+        {
+          "name": "default"
+        },
+        {
+          "name": "ohosTest"
+        }
+      ]
+    },
+    "BUILD_CACHE_DIR": ""
+  },
+  "ohos-module-cloud_objects": {
+    "SELECT_TARGET": "default",
+    "MODULE_BUILD_DIR": "E:\\github\\Team4-HandHeld-Museum\\Application\\cloud_objects\\build",
+    "DEPENDENCY_INFO": {},
+    "TARGETS": {
+      "default": {
+        "SOURCE_ROOT": "E:\\github\\Team4-HandHeld-Museum\\Application\\cloud_objects\\src\\main",
+        "RESOURCES_PATH": [
+          "E:\\github\\Team4-HandHeld-Museum\\Application\\cloud_objects\\src\\main\\resources"
+        ],
+        "BUILD_PATH": {
+          "OUTPUT_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\cloud_objects\\build\\default\\outputs\\default",
+          "INTERMEDIA_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\cloud_objects\\build\\default\\intermediates",
+          "JS_ASSETS_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\cloud_objects\\build\\default\\intermediates\\loader_out\\default",
+          "JS_LITE_ASSETS_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\cloud_objects\\build\\default\\intermediates\\loader_out_lite\\default",
+          "RES_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\cloud_objects\\build\\default\\intermediates\\res\\default",
+          "RES_PROFILE_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\cloud_objects\\build\\default\\intermediates\\res\\default\\resources\\base\\profile",
+          "ETS_SUPER_VISUAL_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\cloud_objects\\build\\default\\cache\\default\\default@HarCompileArkTS\\esmodule",
+          "JS_SUPER_VISUAL_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\cloud_objects\\build\\default\\cache\\default\\default@HarCompileJS\\jsbundle",
+          "WORKER_LOADER": "E:\\github\\Team4-HandHeld-Museum\\Application\\cloud_objects\\build\\default\\intermediates\\loader\\default\\loader.json",
+          "MANIFEST_JSON": "E:\\github\\Team4-HandHeld-Museum\\Application\\cloud_objects\\build\\default\\intermediates\\manifest\\default",
+          "OUTPUT_METADATA_JSON": "E:\\github\\Team4-HandHeld-Museum\\Application\\cloud_objects\\build\\default\\intermediates\\hap_metadata\\default\\output_metadata.json",
+          "SOURCE_MAP_DIR": "E:\\github\\Team4-HandHeld-Museum\\Application\\cloud_objects\\build\\default\\intermediates\\source_map\\default"
+        },
+        "BUILD_OPTION": {
+          "debuggable": true
+        }
+      }
+    },
+    "BUILD_OPTION": {
+      "default-default": {
+        "debuggable": true,
+        "copyFrom": "default",
+        "strictMode": {
+          "caseSensitiveCheck": true,
+          "useNormalizedOHMUrl": true
+        },
+        "name": "debug"
+      }
+    },
+    "BUILD_PROFILE_OPT": {
+      "apiType": "stageMode",
+      "buildOption": {},
+      "buildOptionSet": [
+        {
+          "name": "default"
+        },
+        {
+          "name": "debug"
+        },
+        {
+          "name": "release"
+        }
+      ],
+      "targets": [
+        {
+          "name": "default"
+        }
+      ]
+    },
+    "BUILD_CACHE_DIR": ""
+  },
+  "ohos-project": {
+    "SELECT_PRODUCT_NAME": "default",
+    "MODULE_BUILD_DIR": "E:\\github\\Team4-HandHeld-Museum\\Application\\build",
+    "BUNDLE_NAME": "com.museum.handheld",
+    "BUILD_PATH": {
+      "OUTPUT_PATH": "E:\\github\\Team4-HandHeld-Museum\\Application\\build\\outputs\\default"
+    },
+    "MODULES": [
+      {
+        "name": "entry",
+        "srcPath": "E:\\github\\Team4-HandHeld-Museum\\Application\\entry",
+        "targets": [
+          {
+            "name": "default",
+            "applyToProducts": [
+              "default"
+            ]
+          }
+        ],
+        "belongProjectPath": "E:\\github\\Team4-HandHeld-Museum\\Application"
+      },
+      {
+        "name": "cloud_objects",
+        "srcPath": "E:\\github\\Team4-HandHeld-Museum\\Application\\cloud_objects",
+        "belongProjectPath": "E:\\github\\Team4-HandHeld-Museum\\Application"
+      }
+    ],
+    "PROFILE_OPT": {
+      "app": {
+        "signingConfigs": [],
+        "products": [
+          {
+            "name": "default",
+            "signingConfig": "default",
+            "compatibleSdkVersion": "5.0.4(16)",
+            "runtimeOS": "HarmonyOS",
+            "buildOption": {
+              "strictMode": {
+                "caseSensitiveCheck": true,
+                "useNormalizedOHMUrl": true
+              }
+            }
+          }
+        ],
+        "buildModeSet": [
+          {
+            "name": "debug"
+          },
+          {
+            "name": "release"
+          }
+        ]
+      },
+      "modules": [
+        {
+          "name": "entry",
+          "srcPath": "./entry",
+          "targets": [
+            {
+              "name": "default",
+              "applyToProducts": [
+                "default"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "cloud_objects",
+          "srcPath": "./cloud_objects"
+        }
+      ]
+    },
+    "CONFIG_PROPERTIES": {
+      "enableSignTask": true,
+      "skipNativeIncremental": false,
+      "hvigor.keepDependency": true
+    },
+    "OVERALL_PROJECT_PATHS": [
+      "E:\\github\\Team4-HandHeld-Museum\\Application"
+    ],
+    "BUILD_CACHE_DIR": ""
+  },
+  "version": 1
+}
