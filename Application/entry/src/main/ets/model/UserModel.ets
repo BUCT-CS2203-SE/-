@@ -95,6 +95,11 @@ export class UserComment {
 }
 
 /**
+ * 评论数据类型，用于ArtifactService
+ */
+export type CommentData = UserComment;
+
+/**
  * 评论接口
  */
 export interface Comment {

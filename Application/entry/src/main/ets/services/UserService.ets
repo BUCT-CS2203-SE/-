@@ -1,48 +1,22 @@
 import { User, UserComment } from '../model/UserModel';
 import { Constants } from '../common/constants/Constants';
-import http from '@ohos.net.http';
 import preferences from '@ohos.data.preferences';
-import { CommentService } from './CommentService';
-
-/**
- * API响应数据结构
- */
-interface ApiResponse<T> {
-  code: number;
-  message: string;
-  data: T;
-}
-
-/**
- * 用户数据结构
- */
-interface UserData {
-  id: string;
-  username: string;
-  avatarUrl: string;
-  email: string;
-  isVerified: boolean;
-  favorites: string[];
-}
-
-/**
- * 评论数据结构
- */
-interface CommentData {
-  id: string;
-  userId: string;
-  username: string;
-  avatarUrl: string;
-  content: string;
-  createTime: string;
-  artifactId: string;
-}
+import { ApiService } from './ApiService';
 
 /**
  * 错误接口
  */
 interface ErrorWithMessage {
   message: string;
+}
+
+/**
+ * 用户服务错误类
+ */
+class UserServiceError extends Error {
+  constructor(message: string) {
+    super(message);
+  }
 }
 
 /**
@@ -56,61 +30,30 @@ export class UserService {
   // 登录状态键名
   private static readonly LOGIN_STATE_KEY = 'login_state';
   
+  // API服务实例
+  private apiService: ApiService = new ApiService();
+  
   /**
    * 用户登录
    * @param username 用户名
    * @param password 密码
    */
-  login(username: string, password: string): Promise<User> {
-    return new Promise((resolve, reject) => {
-      // 创建HTTP请求
-      let httpRequest = http.createHttp();
-      httpRequest.request(
-        `${Constants.BASE_URL}/users/login`,
-        {
-          method: http.RequestMethod.POST,
-          header: {
-            'Content-Type': 'application/json'
-          },
-          extraData: JSON.stringify({
-            username: username,
-            password: password
-          })
-        },
-        async (err, data) => {
-          if (!err) {
-            // 解析响应数据
-            try {
-              const responseData = JSON.parse(data.result.toString()) as ApiResponse<UserData>;
-              if (responseData.code === 200) {
-                const userData = responseData.data;
-                const user = new User(
-                  userData.id,
-                  userData.username,
-                  userData.avatarUrl,
-                  userData.email,
-                  userData.isVerified,
-                  userData.favorites
-                );
-                
-                // 保存用户信息至首选项
-                await this.saveUserInfo(user);
-                
-                resolve(user);
-              } else {
-                reject(`登录失败: ${responseData.message}`);
-              }
-            } catch (e) {
-              reject(`解析数据失败: ${e}`);
-            }
-          } else {
-            reject(`请求失败: ${err.message}`);
-          }
-          // 关闭HTTP连接
-          httpRequest.destroy();
-        }
-      );
-    });
+  async login(username: string, password: string): Promise<User> {
+    try {
+      console.info(`尝试登录，用户名: ${username}`);
+      
+      // 调用API服务登录
+      const user = await this.apiService.login(username, password);
+      console.info('登录成功');
+      
+      // 保存用户信息至首选项
+      await this.saveUserInfo(user);
+      
+      return user;
+    } catch (error) {
+      console.error('登录失败:', error);
+      throw new UserServiceError(error instanceof Error ? error.message : String(error));
+    }
   }
   
   /**
@@ -119,50 +62,25 @@ export class UserService {
    * @param password 密码
    * @param email 电子邮箱
    */
-  register(username: string, password: string, email: string): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      // 创建HTTP请求
-      let httpRequest = http.createHttp();
-      httpRequest.request(
-        `${Constants.BASE_URL}/users/register`,
-        {
-          method: http.RequestMethod.POST,
-          header: {
-            'Content-Type': 'application/json'
-          },
-          extraData: JSON.stringify({
-            username: username,
-            password: password,
-            email: email
-          })
-        },
-        (err, data) => {
-          if (!err) {
-            // 解析响应数据
-            try {
-              const responseData = JSON.parse(data.result.toString()) as ApiResponse<boolean>;
-              if (responseData.code === 200) {
-                resolve(true);
-              } else {
-                reject(`注册失败: ${responseData.message}`);
-              }
-            } catch (e) {
-              reject(`解析数据失败: ${e}`);
-            }
-          } else {
-            reject(`请求失败: ${err.message}`);
-          }
-          // 关闭HTTP连接
-          httpRequest.destroy();
-        }
-      );
-    });
+  async register(username: string, password: string, email: string): Promise<User> {
+    try {
+      console.info(`尝试注册，用户名: ${username}`);
+      
+      // 调用API服务注册
+      const user = await this.apiService.register(username, password, email);
+      console.info('注册成功');
+      
+      return user;
+    } catch (error) {
+      console.error('注册失败:', error);
+      throw new UserServiceError(error instanceof Error ? error.message : String(error));
+    }
   }
   
   /**
-   * 获取用户信息
+   * 获取当前用户信息
    */
-  async getUserInfo(): Promise<User | null> {
+  async getCurrentUser(): Promise<User | null> {
     try {
       const context = getContext(this);
       // 获取首选项
@@ -170,7 +88,7 @@ export class UserService {
       // 获取用户信息
       const userInfoStr = await prefs.get(UserService.USER_KEY, '');
       if (userInfoStr) {
-        return JSON.parse(userInfoStr.toString());
+        return JSON.parse(userInfoStr.toString()) as User;
       }
       return null;
     } catch (err) {
@@ -196,14 +114,14 @@ export class UserService {
       await prefs.flush();
     } catch (err) {
       console.error(`保存用户信息失败: ${(err as ErrorWithMessage).message}`);
-      throw new Error(`保存用户信息失败: ${(err as ErrorWithMessage).message}`);
+      throw new UserServiceError(`保存用户信息失败: ${(err as ErrorWithMessage).message}`);
     }
   }
   
   /**
-   * 登出
+   * 用户登出
    */
-  async logout(): Promise<void> {
+  async logout(): Promise<boolean> {
     try {
       const context = getContext(this);
       // 获取首选项
@@ -214,9 +132,10 @@ export class UserService {
       await prefs.put(UserService.LOGIN_STATE_KEY, false);
       // 提交更改
       await prefs.flush();
+      return true;
     } catch (err) {
       console.error(`登出失败: ${(err as ErrorWithMessage).message}`);
-      throw new Error(`登出失败: ${(err as ErrorWithMessage).message}`);
+      return false;
     }
   }
   
@@ -237,47 +156,36 @@ export class UserService {
   }
   
   /**
-   * 获取文物评论
-   * @param artifactId 文物ID
+   * 更新用户信息
+   * @param userData 用户数据
    */
-  getComments(artifactId: string): Promise<UserComment[]> {
-    return new Promise((resolve, reject) => {
-      // 创建HTTP请求
-      let httpRequest = http.createHttp();
-      httpRequest.request(
-        `${Constants.BASE_URL}/comments?artifactId=${artifactId}`,
-        {
-          method: http.RequestMethod.GET,
-          header: { 'Content-Type': 'application/json' }
-        },
-        (err, data) => {
-          if (!err) {
-            // 解析响应数据
-            try {
-              const responseData = JSON.parse(data.result.toString()) as ApiResponse<CommentData[]>;
-              const comments: UserComment[] = responseData.data.map((item: CommentData) => {
-                return new UserComment(
-                  item.id,
-                  item.userId,
-                  item.username,
-                  item.avatarUrl,
-                  item.content,
-                  item.createTime,
-                  item.artifactId
-                );
-              });
-              resolve(comments);
-            } catch (e) {
-              reject(`解析数据失败: ${e}`);
-            }
-          } else {
-            reject(`请求失败: ${err.message}`);
-          }
-          // 关闭HTTP连接
-          httpRequest.destroy();
-        }
+  async updateUserInfo(userData: Partial<User>): Promise<boolean> {
+    try {
+      // 获取当前用户
+      const currentUser = await this.getCurrentUser();
+      if (!currentUser) {
+        throw new UserServiceError('用户未登录');
+      }
+      
+      // 调用API服务更新用户信息
+      await this.apiService.updateUserInfo(currentUser.id, userData);
+      
+      // 更新本地存储的用户信息
+      const updatedUser: User = new User(
+        currentUser.id,
+        userData.username || currentUser.username,
+        userData.avatarUrl || currentUser.avatarUrl,
+        userData.email || currentUser.email,
+        userData.isVerified !== undefined ? userData.isVerified : currentUser.isVerified,
+        userData.favorites || currentUser.favorites
       );
-    });
+      await this.saveUserInfo(updatedUser);
+      
+      return true;
+    } catch (error) {
+      console.error('更新用户信息失败:', error);
+      throw new UserServiceError(error instanceof Error ? error.message : String(error));
+    }
   }
   
   /**
@@ -285,58 +193,114 @@ export class UserService {
    * @param artifactId 文物ID
    * @param content 评论内容
    */
-  addComment(artifactId: string, content: string): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      // 创建HTTP请求
-      this.getUserInfo().then(user => {
-        if (!user) {
-          reject('用户未登录');
-          return;
-        }
-        
-        let httpRequest = http.createHttp();
-        httpRequest.request(
-          `${Constants.BASE_URL}/comments`,
-          {
-            method: http.RequestMethod.POST,
-            header: {
-              'Content-Type': 'application/json'
-            },
-            extraData: JSON.stringify({
-              artifactId: artifactId,
-              content: content,
-              userId: user.id
-            })
-          },
-          (err, data) => {
-            if (!err) {
-              // 解析响应数据
-              try {
-                const responseData = JSON.parse(data.result.toString()) as ApiResponse<boolean>;
-                if (responseData.code === 200) {
-                  resolve(true);
-                } else {
-                  reject(`添加评论失败: ${responseData.message}`);
-                }
-              } catch (e) {
-                reject(`解析数据失败: ${e}`);
-              }
-            } else {
-              reject(`请求失败: ${err.message}`);
-            }
-            // 关闭HTTP连接
-            httpRequest.destroy();
-          }
-        );
-      }).catch((err: ErrorWithMessage) => {
-        reject(`获取用户信息失败: ${err.message}`);
-      });
-    });
+  async addComment(artifactId: string, content: string): Promise<boolean> {
+    try {
+      // 获取当前用户
+      const currentUser = await this.getCurrentUser();
+      if (!currentUser) {
+        throw new UserServiceError('用户未登录');
+      }
+      
+      // 调用API服务添加评论
+      await this.apiService.addComment(artifactId, currentUser.id, content);
+      
+      return true;
+    } catch (error) {
+      console.error('添加评论失败:', error);
+      throw new UserServiceError(error instanceof Error ? error.message : String(error));
+    }
   }
-
-  async getCommentsByUserId(userId: string): Promise<UserComment[]> {
-    const commentService = new CommentService();
-    const allComments = await commentService.getAllComments();
-    return allComments.filter(comment => comment.userId === userId);
+  
+  /**
+   * 获取用户评论
+   * @param userId 用户ID，如果不提供则获取当前用户的评论
+   */
+  async getComments(userId?: string): Promise<UserComment[]> {
+    try {
+      // 如果未提供用户ID，获取当前用户
+      if (!userId) {
+        const currentUser = await this.getCurrentUser();
+        if (!currentUser) {
+          throw new UserServiceError('用户未登录');
+        }
+        userId = currentUser.id;
+      }
+      
+      // 调用API服务获取用户评论
+      return await this.apiService.getUserComments(userId);
+    } catch (error) {
+      console.error('获取用户评论失败:', error);
+      throw new UserServiceError(error instanceof Error ? error.message : String(error));
+    }
+  }
+  
+  /**
+   * 添加收藏
+   * @param artifactId 文物ID
+   */
+  async addFavorite(artifactId: string): Promise<boolean> {
+    try {
+      // 获取当前用户
+      const currentUser = await this.getCurrentUser();
+      if (!currentUser) {
+        throw new UserServiceError('用户未登录');
+      }
+      
+      // 调用API服务添加收藏
+      await this.apiService.addFavorite(currentUser.id, artifactId);
+      
+      return true;
+    } catch (error) {
+      console.error('添加收藏失败:', error);
+      throw new UserServiceError(error instanceof Error ? error.message : String(error));
+    }
+  }
+  
+  /**
+   * 取消收藏
+   * @param artifactId 文物ID
+   */
+  async removeFavorite(artifactId: string): Promise<boolean> {
+    try {
+      // 获取当前用户
+      const currentUser = await this.getCurrentUser();
+      if (!currentUser) {
+        throw new UserServiceError('用户未登录');
+      }
+      
+      // 调用API服务取消收藏
+      await this.apiService.removeFavorite(currentUser.id, artifactId);
+      
+      return true;
+    } catch (error) {
+      console.error('取消收藏失败:', error);
+      throw new UserServiceError(error instanceof Error ? error.message : String(error));
+    }
+  }
+  
+  /**
+   * 获取用户收藏
+   * @param userId 用户ID，如果不提供则获取当前用户的收藏
+   */
+  async getFavorites(userId?: string): Promise<string[]> {
+    try {
+      // 如果未提供用户ID，获取当前用户
+      if (!userId) {
+        const currentUser = await this.getCurrentUser();
+        if (!currentUser) {
+          throw new UserServiceError('用户未登录');
+        }
+        userId = currentUser.id;
+      }
+      
+      // 调用API服务获取用户收藏
+      const artifacts = await this.apiService.getUserFavorites(userId);
+      
+      // 返回文物ID列表
+      return artifacts.map(artifact => artifact.id);
+    } catch (error) {
+      console.error('获取用户收藏失败:', error);
+      throw new UserServiceError(error instanceof Error ? error.message : String(error));
+    }
   }
 } 
