@@ -33,9 +33,10 @@ export class Artifact {
   imageUrl: string;
   
   /**
-   * 文物类别ID
+   * 文物类型
+   * (0-青铜器 1-陶瓷器 2-玉器 3-书画 4-货币 5-石器 6-雕塑 7-其他)
    */
-  categoryId: number;
+  type: number;
   
   /**
    * 文物详情URL
@@ -53,7 +54,7 @@ export class Artifact {
   comments: number;
   
   constructor(id: string, name: string, era: string, museum: string, 
-              description: string, imageUrl: string, categoryId: number, 
+              description: string, imageUrl: string, type: number, 
               detailUrl: string, likes: number = 0, comments: number = 0) {
     this.id = id;
     this.name = name;
@@ -61,7 +62,7 @@ export class Artifact {
     this.museum = museum;
     this.description = description;
     this.imageUrl = imageUrl;
-    this.categoryId = categoryId;
+    this.type = type;
     this.detailUrl = detailUrl;
     this.likes = likes;
     this.comments = comments;

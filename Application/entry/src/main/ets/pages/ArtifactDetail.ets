@@ -45,12 +45,23 @@ struct ArtifactDetail {
   
   loadArtifactDetail() {
     this.isLoading = true;
+    this.errorMsg = '';
+    console.info(`开始加载文物详情，ID: ${this.artifactId}`);
+    
     this.artifactService.getArtifactDetail(this.artifactId)
       .then((artifact) => {
+        console.info(`文物详情加载成功: ${JSON.stringify(artifact)}`);
         this.artifact = artifact;
         this.isLoading = false;
+        
+        // 判断是否为默认数据
+        if (this.artifactId !== artifact.id) {
+          console.warn(`加载了默认数据，请求ID: ${this.artifactId}, 返回ID: ${artifact.id}`);
+          this.errorMsg = '无法从数据库获取文物详情，显示的是默认数据';
+        }
       })
       .catch((err: ErrorWithMessage) => {
+        console.error(`加载文物详情失败: ${err.message}`, err);
         this.errorMsg = `加载文物详情失败: ${err.message}`;
         this.isLoading = false;
       });
@@ -149,6 +160,18 @@ struct ArtifactDetail {
         // 文物详情
         Scroll() {
           Column() {
+            // 如果有错误信息但仍显示文物，显示错误提示
+            if (this.errorMsg) {
+              Text(this.errorMsg)
+                .fontSize(14)
+                .fontColor('#FF0000')
+                .backgroundColor('#FFEEEE')
+                .width('100%')
+                .textAlign(TextAlign.Center)
+                .padding(8)
+                .margin({ bottom: 10 })
+            }
+            
             // 文物图片
             Stack() {
               Image(this.artifact.imageUrl || $r('app.media.placeholder'))
@@ -198,7 +221,7 @@ struct ArtifactDetail {
                 .fontColor('#666666')
                 .margin({ top: 8 })
               
-              Text(`分类: ${Constants.ARTIFACT_CATEGORIES.find((c: CategoryItem) => c.id === this.artifact.categoryId)?.name || '未知'}`)
+              Text(`分类: ${Constants.ARTIFACT_CATEGORIES.find((c: CategoryItem) => c.id === this.artifact.type)?.name || '未知'}`)
                 .fontSize(16)
                 .fontColor('#666666')
                 .margin({ top: 8 })
