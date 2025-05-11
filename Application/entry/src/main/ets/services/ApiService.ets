@@ -52,24 +52,37 @@ interface GenericResponse {
 }
 
 /**
+ * 文物图片接口
+ */
+interface ArtifactPhoto {
+  photo_id: number;
+  relic_id: number;
+  photo_url: string;
+}
+
+/**
  * 文物响应接口
  */
 interface ArtifactResponse {
-  artifacts: Array<ArtifactData>;
-  totalCount: number;
+  message: string;
+  data: Array<ArtifactData>;
+  total?: number;
+  currentPage?: number;
+  pageSize?: number;
 }
 
 /**
  * 文物数据接口
  */
 interface ArtifactData {
-  relic_id?: number;
-  name?: string;
-  era?: string;
-  museum?: string;
-  description?: string;
-  type?: number;
-  id?: string;
+  relic_id: number;
+  name: string;
+  type: number;
+  era: string;
+  museum: string;
+  description: string;
+  spare_id: number;
+  photos?: Array<ArtifactPhoto>;
 }
 
 /**
@@ -341,7 +354,7 @@ export class ApiService {
    */
   async getArtifactList(type?: number, page: number = 1, pageSize: number = 10): Promise<Artifact[]> {
     try {
-      let url = `/artifacts?page=${page}&pageSize=${pageSize}`;
+      let url = `${this.BASE_URL}/artifacts?page=${page}&pageSize=${pageSize}`;
       if (type !== undefined) {
         url += `&type=${type}`;
       }
@@ -352,17 +365,18 @@ export class ApiService {
       );
       
       // 将API返回的数据转换为Artifact对象
-      return response.artifacts.map(item => new Artifact(
-        item.relic_id?.toString() || '',
-        item.name?.toString() || '',
-        item.era?.toString() || '',
-        item.museum?.toString() || '',
-        item.description?.toString() || '',
-        '', // 原来的imageUrl，现在没有了
-        typeof item.type === 'number' ? item.type : 7,
-        '', // 原来的detailUrl，现在没有了
-        0,  // 原来的likes，现在没有了
-        0   // 原来的comments，现在没有了
+      return response.data.map(item => new Artifact(
+        item.relic_id.toString(),
+        item.name,
+        item.era,
+        item.museum,
+        item.description,
+        item.photos?.[0]?.photo_url || '', // 使用第一张图片作为主图
+        item.type,
+        '', // detailUrl
+        0,  // likes
+        0,  // comments
+        item.photos?.map(photo => photo.photo_url) || [] // 所有图片URL
       ));
     } catch (error) {
       console.error('获取文物列表失败:', error);
@@ -376,23 +390,24 @@ export class ApiService {
    */
   async getArtifactDetail(id: string): Promise<Artifact> {
     try {
-      const item = await this.sendRequest<ArtifactData>(
-        `/artifacts/${id}`,
+      const response = await this.sendRequest<ArtifactData>(
+        `${this.BASE_URL}/artifacts/${id}`,
         this.createRequestOptions(http.RequestMethod.GET)
       );
       
       // 将API返回的数据转换为Artifact对象
       return new Artifact(
-        item.relic_id?.toString() || '',
-        item.name?.toString() || '',
-        item.era?.toString() || '',
-        item.museum?.toString() || '',
-        item.description?.toString() || '',
-        '', // 原来的imageUrl，现在没有了
-        typeof item.type === 'number' ? item.type : 7,
-        '', // 原来的detailUrl，现在没有了
-        0,  // 原来的likes，现在没有了
-        0   // 原来的comments，现在没有了
+        response.relic_id.toString(),
+        response.name,
+        response.era,
+        response.museum,
+        response.description,
+        response.photos?.[0]?.photo_url || '', // 使用第一张图片作为主图
+        response.type,
+        '', // detailUrl
+        0,  // likes
+        0,  // comments
+        response.photos?.map(photo => photo.photo_url) || [] // 所有图片URL
       );
     } catch (error) {
       console.error(`获取文物详情失败: ${id}`, error);
@@ -406,23 +421,24 @@ export class ApiService {
    */
   async searchArtifacts(keyword: string): Promise<Artifact[]> {
     try {
-      const items = await this.sendRequest<Array<ArtifactData>>(
-        `/artifacts/search?keyword=${encodeURIComponent(keyword)}`,
+      const response = await this.sendRequest<ArtifactResponse>(
+        `${this.BASE_URL}/artifacts?keyword=${encodeURIComponent(keyword)}`,
         this.createRequestOptions(http.RequestMethod.GET)
       );
       
       // 将API返回的数据转换为Artifact对象数组
-      return items.map(item => new Artifact(
-        item.relic_id?.toString() || '',
-        item.name?.toString() || '',
-        item.era?.toString() || '',
-        item.museum?.toString() || '',
-        item.description?.toString() || '',
-        '', // 原来的imageUrl，现在没有了
-        typeof item.type === 'number' ? item.type : 7,
-        '', // 原来的detailUrl，现在没有了
-        0,  // 原来的likes，现在没有了
-        0   // 原来的comments，现在没有了
+      return response.data.map(item => new Artifact(
+        item.relic_id.toString(),
+        item.name,
+        item.era,
+        item.museum,
+        item.description,
+        item.photos?.[0]?.photo_url || '', // 使用第一张图片作为主图
+        item.type,
+        '', // detailUrl
+        0,  // likes
+        0,  // comments
+        item.photos?.map(photo => photo.photo_url) || [] // 所有图片URL
       ));
     } catch (error) {
       console.error(`搜索文物失败: ${keyword}`, error);
@@ -690,16 +706,17 @@ export class ApiService {
       
       // 将API返回的数据转换为Artifact对象数组
       return items.map(item => new Artifact(
-        item.id?.toString() || '',
-        item.name?.toString() || '',
-        item.era?.toString() || '',
-        item.museum?.toString() || '',
-        item.description?.toString() || '',
-        '', // 原来的imageUrl，现在没有了
-        typeof item.type === 'number' ? item.type : 7,
-        '', // 原来的detailUrl，现在没有了
-        0,  // 原来的likes，现在没有了
-        0   // 原来的comments，现在没有了
+        item.relic_id.toString(),
+        item.name,
+        item.era,
+        item.museum,
+        item.description,
+        item.photos?.[0]?.photo_url || '', // 使用第一张图片作为主图
+        item.type,
+        '', // detailUrl
+        0,  // likes
+        0,  // comments
+        item.photos?.map(photo => photo.photo_url) || [] // 所有图片URL
       ));
     } catch (error) {
       console.error(`获取用户收藏失败: ${userId}`, error);

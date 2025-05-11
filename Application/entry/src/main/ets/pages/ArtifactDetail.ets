@@ -11,21 +11,42 @@ interface RouterParams {
 }
 
 /**
- * 错误接口
+ * 错误处理工具类
  */
-interface ErrorWithMessage {
+class ErrorHandler {
+  /**
+   * 处理错误并返回错误消息
+   */
+  static handleError(error: Error): string {
+    return error.message;
+  }
+}
+
+/**
+ * 自定义错误类型
+ */
+class AppError {
   message: string;
+  
+  constructor(message: string) {
+    this.message = message;
+  }
+  
+  toString(): string {
+    return this.message;
+  }
 }
 
 @Entry
 @Component
 struct ArtifactDetail {
-  @State artifact: Artifact = new Artifact('', '', '', '', '', '', 1, '', 0, 0);
+  @State artifact: Artifact = new Artifact('', '', '', '', '', '', 0, '', 0, 0);
   @State comments: UserComment[] = [];
   @State isLoading: boolean = true;
   @State errorMsg: string = '';
   @State commentText: string = '';
   @State isLiked: boolean = false;
+  @State currentImageIndex: number = 0;
   
   private artifactId: string = '';
   private artifactService: ArtifactService = new ArtifactService();
@@ -43,28 +64,28 @@ struct ArtifactDetail {
     }
   }
   
-  loadArtifactDetail() {
+  async loadArtifactDetail() {
+    try {
     this.isLoading = true;
     this.errorMsg = '';
     console.info(`开始加载文物详情，ID: ${this.artifactId}`);
     
-    this.artifactService.getArtifactDetail(this.artifactId)
-      .then((artifact) => {
-        console.info(`文物详情加载成功: ${JSON.stringify(artifact)}`);
-        this.artifact = artifact;
-        this.isLoading = false;
+      this.artifact = await this.artifactService.getArtifactDetail(this.artifactId);
+      this.comments = await this.artifactService.getArtifactComments(this.artifactId);
+      
+      console.info(`文物详情加载成功: ${JSON.stringify(this.artifact)}`);
         
         // 判断是否为默认数据
-        if (this.artifactId !== artifact.id) {
-          console.warn(`加载了默认数据，请求ID: ${this.artifactId}, 返回ID: ${artifact.id}`);
+      if (this.artifactId !== this.artifact.id) {
+        console.warn(`加载了默认数据，请求ID: ${this.artifactId}, 返回ID: ${this.artifact.id}`);
           this.errorMsg = '无法从数据库获取文物详情，显示的是默认数据';
         }
-      })
-      .catch((err: ErrorWithMessage) => {
-        console.error(`加载文物详情失败: ${err.message}`, err);
-        this.errorMsg = `加载文物详情失败: ${err.message}`;
+    } catch (error) {
+      console.error(`加载文物详情失败: ${error.message}`);
+      this.errorMsg = `加载文物详情失败: ${error.message}`;
+    } finally {
         this.isLoading = false;
-      });
+    }
   }
   
   loadComments() {
@@ -72,8 +93,8 @@ struct ArtifactDetail {
       .then((comments) => {
         this.comments = comments;
       })
-      .catch((err: ErrorWithMessage) => {
-        console.error(`加载评论失败: ${err.message}`);
+      .catch((error: Error) => {
+        console.error(`加载评论失败: ${error.message}`);
       });
   }
   
@@ -91,8 +112,8 @@ struct ArtifactDetail {
           this.loadComments();
         }
       })
-      .catch((err: ErrorWithMessage) => {
-        ToastUtil.show(`评论失败: ${err.message}`);
+      .catch((error: Error) => {
+        ToastUtil.show(`评论失败: ${error.message}`);
       });
   }
   
@@ -172,22 +193,22 @@ struct ArtifactDetail {
                 .margin({ bottom: 10 })
             }
             
-            // 文物图片
+            // 文物图片轮播
             Stack() {
-              Image(this.artifact.imageUrl || $r('app.media.placeholder'))
+              Swiper() {
+                ForEach(this.artifact.photos, (photoUrl: string) => {
+                  Image(photoUrl)
                 .width('100%')
                 .height(300)
                 .objectFit(ImageFit.Cover)
-              
-              Row() {
-                Text(`${this.artifact.museum}`)
-                  .fontSize(12)
-                  .fontColor('#FFFFFF')
-                  .backgroundColor('#00000080')
-                  .borderRadius(12)
-                  .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+                })
               }
-              .position({ x: 10, y: 10 })
+              .width('100%')
+              .height(300)
+              .indicator(true)
+              .loop(true)
+              .autoPlay(true)
+              .interval(3000)
             }
             .width('100%')
             .height(300)

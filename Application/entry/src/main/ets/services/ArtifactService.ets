@@ -128,7 +128,7 @@ export class ArtifactService {
       console.info(`成功获取文物详情: ${artifact.name}`);
       return artifact;
     } catch (err) {
-      console.error('获取文物详情失败:', JSON.stringify(err));
+      console.error('获取文物详情失败:', err instanceof Error ? err.message : String(err));
       
       // 返回模拟数据作为兜底方案
       console.info('使用模拟数据（文物详情）');

@@ -300,16 +300,7 @@ struct Index {
                     .height(180)
                     .objectFit(ImageFit.Cover)
                     .borderRadius({ topLeft: 8, topRight: 8 })
-                  
-                  Row() {
-                    Text(artifact.museum)
-                      .fontSize(12)
-                      .fontColor('#FFFFFF')
-                      .backgroundColor('#00000080')
-                      .borderRadius(10)
-                      .padding({ left: 8, right: 8, top: 2, bottom: 2 })
-                  }
-                  .position({ x: 5, y: 5 })
+
                 }
                 .width('100%')
                 
@@ -321,24 +312,19 @@ struct Index {
                     .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                     .width('100%')
-                  
+
                   Row() {
                     Text(`${artifact.era}`)
                       .fontSize(14)
                       .fontColor('#666666')
-                      .layoutWeight(1)
-                    
-                    Row() {
-                      Image($r('app.media.like'))
-                        .width(16)
-                        .height(16)
-                        .fillColor('#666666')
-                      
-                      Text(`${artifact.likes}`)
-                        .fontSize(12)
-                        .fontColor('#666666')
-                        .margin({ left: 2 })
-                    }
+                      .margin({ right: 8 })
+                    Text(artifact.museum)
+                      .fontSize(14)
+                      .fontColor('#666666')
+                      .backgroundColor('#00000010')
+                      .borderRadius(10)
+                      .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+                      .margin({ right: 8 })
                   }
                   .width('100%')
                   .margin({ top: 5 })
@@ -360,9 +346,9 @@ struct Index {
           })
         }
         .columnsTemplate('1fr 1fr')  // 两列布局
-        .columnsGap(10)  // 列间距
-        .rowsGap(10)  // 行间距
-        .width('90%')
+        .columnsGap(12)  // 列间距（可适当加大）
+        .rowsGap(12)  // 行间距（可适当加大）
+        .width('100%')  // 这里改成100%
         .layoutWeight(1)
       } 
       // 无数据状态

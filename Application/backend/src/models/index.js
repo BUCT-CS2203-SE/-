@@ -23,50 +23,52 @@ db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
 // 导入模型
-db.artifacts = require('./artifact.model.js')(sequelize, Sequelize);
-db.users = require('./user.model.js')(sequelize, Sequelize);
-db.comments = require('./comment.model.js')(sequelize, Sequelize);
-db.favorites = require('./favorite.model.js')(sequelize, Sequelize);
+const artifactModels = require('./artifact.model.js')(sequelize, Sequelize);
+db.Artifact = artifactModels.Artifact;
+db.ArtifactPhoto = artifactModels.ArtifactPhoto;
+db.User = require('./user.model.js')(sequelize, Sequelize);
+db.Comment = require('./comment.model.js')(sequelize, Sequelize);
+db.Favorite = require('./favorite.model.js')(sequelize, Sequelize);
 
-// 设置关联关系，但不添加外键约束
-db.comments.belongsTo(db.artifacts, {
-    foreignKey: 'artifactId',
-    constraints: false
-});
-db.comments.belongsTo(db.users, {
-    foreignKey: 'userId',
-    constraints: false
+// 设置关联关系
+db.Comment.belongsTo(db.Artifact, {
+    foreignKey: 'relic_id',
+    as: 'artifact'
 });
 
-// 修改关联关系的名称，避免与属性冲突
-db.artifacts.hasMany(db.comments, {
-    foreignKey: 'artifactId',
-    as: 'commentList',
-    constraints: false
-});
-db.users.hasMany(db.comments, {
-    foreignKey: 'userId',
-    as: 'userComments',
-    constraints: false
+db.Comment.belongsTo(db.User, {
+    foreignKey: 'user_id',
+    as: 'user'
 });
 
-db.favorites.belongsTo(db.artifacts, {
+db.Artifact.hasMany(db.Comment, {
+    foreignKey: 'relic_id',
+    as: 'comments'
+});
+
+db.User.hasMany(db.Comment, {
+    foreignKey: 'user_id',
+    as: 'comments'
+});
+
+db.Favorite.belongsTo(db.Artifact, {
     foreignKey: 'artifactId',
-    constraints: false
+    as: 'artifact'
 });
-db.favorites.belongsTo(db.users, {
+
+db.Favorite.belongsTo(db.User, {
     foreignKey: 'userId',
-    constraints: false
+    as: 'user'
 });
-db.users.hasMany(db.favorites, {
+
+db.User.hasMany(db.Favorite, {
     foreignKey: 'userId',
-    as: 'userFavorites',
-    constraints: false
+    as: 'favorites'
 });
-db.artifacts.hasMany(db.favorites, {
+
+db.Artifact.hasMany(db.Favorite, {
     foreignKey: 'artifactId',
-    as: 'artifactFavorites',
-    constraints: false
+    as: 'favorites'
 });
 
 module.exports = db; 

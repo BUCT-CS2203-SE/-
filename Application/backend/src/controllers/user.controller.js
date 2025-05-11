@@ -2,10 +2,10 @@
  * 用户控制器
  */
 const db = require("../models");
-const User = db.users;
-const Comment = db.comments;
-const Favorite = db.favorites;
-const Artifact = db.artifacts;
+const User = db.User;
+const Comment = db.Comment;
+const Favorite = db.Favorite;
+const Artifact = db.Artifact;
 const { Op } = db.Sequelize;
 const bcrypt = require('bcrypt');
 
