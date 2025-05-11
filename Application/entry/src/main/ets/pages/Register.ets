@@ -45,19 +45,48 @@ struct Register {
       return;
     }
     
+    console.info('开始注册流程...');
     this.isLoading = true;
     this.userService.register(this.username, this.password, this.email)
-      .then((success) => {
+      .then((response) => {
+        console.info(`注册成功，响应: ${JSON.stringify(response)}`);
         this.isLoading = false;
-        if (success) {
-          prompt.showToast({ message: '注册成功，请登录' });
-          router.back();
+        
+        try {
+          // 显示注册成功提示
+          console.info('显示注册成功提示...');
+          prompt.showToast({ 
+            message: response.message || '注册成功，请登录',
+            duration: 1500
+          });
+          
+          // 直接跳转到登录页面
+          console.info('准备跳转到登录页面...');
+          router.pushUrl({
+            url: 'pages/Login',
+            params: {
+              phone: this.username // 传递手机号到登录页面
+            }
+          });
+        } catch (error) {
+          console.error('UI操作失败:', error);
+          // 如果UI操作失败，至少尝试导航
+          router.pushUrl({
+            url: 'pages/Login',
+            params: {
+              phone: this.username
+            }
+          });
         }
       })
-      .catch((err: Error) => {
+      .catch((error: Error) => {
+        console.error(`注册失败: ${error.message}`);
         this.isLoading = false;
-        this.errorMsg = `注册失败: ${err.message}`;
-        prompt.showToast({ message: this.errorMsg });
+        this.errorMsg = `注册失败: ${error.message}`;
+        prompt.showToast({ 
+          message: this.errorMsg,
+          duration: 2000
+        });
       });
   }
   

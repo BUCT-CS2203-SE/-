@@ -5,6 +5,8 @@ import { Artifact } from '../model/ArtifactModel';
 import { ArtifactService } from '../services/ArtifactService';
 import prompt from '@ohos.prompt';
 import picker from '@ohos.file.picker';
+import { UserService } from '../services/UserService';
+import { UserInfo } from '../services/UserService';
 
 /**
  * 动态帖子接口
@@ -51,7 +53,10 @@ struct Index {
   @State artifacts: Artifact[] = [];
   @State isArtifactsLoading: boolean = false;
   @State selectedCategory: CategoryItem = { id: 0, name: '全部' };
+  @State userInfo: UserInfo | null = null;
+  
   private artifactService: ArtifactService = new ArtifactService();
+  private userService: UserService = new UserService();
 
   build() {
     Column() {
@@ -822,21 +827,46 @@ struct Index {
   buildProfilePage() {
     Column() {
       Text('个人中心').fontSize(24).fontWeight(FontWeight.Bold).margin({ top: 20, bottom: 20 })
-      // 这里实现个人中心页面
+      
       Column() {
         // 用户信息区域
         Row() {
-          Image($r('app.media.icon'))
-            .width(80)
-            .height(80)
-            .borderRadius(40)
-          
-          Column() {
-            Text('用户名').fontSize(18).fontWeight(FontWeight.Bold)
-            Text('点击登录').fontSize(14).margin({ top: 5 })
+          if (this.userInfo) {
+            // 显示用户头像
+            Image(this.userInfo.img_url || $r('app.media.icon'))
+              .width(80)
+              .height(80)
+              .borderRadius(40)
+              .objectFit(ImageFit.Cover)
+            
+            Column() {
+              Text(this.userInfo.nickname || '未设置昵称')
+                .fontSize(18)
+                .fontWeight(FontWeight.Bold)
+              Text(this.userInfo.phone || '未绑定手机号')
+                .fontSize(14)
+                .margin({ top: 5 })
+            }
+            .alignItems(HorizontalAlign.Start)
+            .margin({ left: 20 })
+          } else {
+            // 未登录状态
+            Image($r('app.media.icon'))
+              .width(80)
+              .height(80)
+              .borderRadius(40)
+            
+            Column() {
+              Text('未登录')
+                .fontSize(18)
+                .fontWeight(FontWeight.Bold)
+              Text('点击登录')
+                .fontSize(14)
+                .margin({ top: 5 })
+            }
+            .alignItems(HorizontalAlign.Start)
+            .margin({ left: 20 })
           }
-          .alignItems(HorizontalAlign.Start)
-          .margin({ left: 20 })
         }
         .width('90%')
         .padding(16)
@@ -844,9 +874,11 @@ struct Index {
         .borderRadius(10)
         .margin({ bottom: 20 })
         .onClick(() => {
-          router.pushUrl({
-            url: 'pages/Login'
-          });
+          if (!this.userInfo) {
+            router.pushUrl({
+              url: 'pages/Login'
+            });
+          }
         })
         
         // 功能区域
@@ -858,6 +890,22 @@ struct Index {
           this.buildProfileItem('我的评论', 'comment')
           Divider().width('100%').height(1).color('#F0F0F0')
           this.buildProfileItem('设置', 'settings')
+          
+          // 如果已登录，显示退出登录按钮
+          if (this.userInfo) {
+            Divider().width('100%').height(1).color('#F0F0F0')
+            Button('退出登录', { type: ButtonType.Normal })
+              .width('100%')
+              .height(50)
+              .backgroundColor('#8B1A1A')
+              .fontColor('#FFFFFF')
+              .margin({ top: 20 })
+              .onClick(() => {
+                this.userService.logout();
+                this.userInfo = null;
+                router.replaceUrl({ url: 'pages/Login' });
+              })
+          }
         }
         .width('90%')
         .backgroundColor('#FFFFFF')
@@ -872,6 +920,9 @@ struct Index {
   }
 
   aboutToAppear() {
+    // 获取用户信息
+    this.loadUserInfo();
+    
     // 添加示例动态数据
     this.posts = [
       {
@@ -914,6 +965,16 @@ struct Index {
 
     // 加载文物数据
     this.loadArtifacts();
+  }
+  
+  private async loadUserInfo() {
+    try {
+      this.userInfo = await this.userService.getUserInfo();
+      console.info('用户信息加载成功:', JSON.stringify(this.userInfo));
+    } catch (error) {
+      console.error('加载用户信息失败:', error);
+      this.userInfo = null;
+    }
   }
 
   // 添加加载文物方法

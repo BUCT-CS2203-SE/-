@@ -20,6 +20,36 @@ class UserServiceError extends Error {
 }
 
 /**
+ * 用户信息更新数据接口
+ */
+interface UserUpdateData {
+  username?: string;
+  avatarUrl?: string;
+  email?: string;
+  isVerified?: boolean;
+  favorites?: string[];
+}
+
+/**
+ * 注册响应接口
+ */
+interface RegisterResponse {
+  user: User;
+  message: string;
+}
+
+/**
+ * 用户信息接口
+ */
+export interface UserInfo {
+  nickname: string;
+  phone: string;
+  email: string;
+  img_url: string;
+  gender: number;
+}
+
+/**
  * 用户服务类
  */
 export class UserService {
@@ -32,24 +62,34 @@ export class UserService {
   
   // API服务实例
   private apiService: ApiService = new ApiService();
+  // 上下文
+  private context: Context = getContext(this);
   
   /**
    * 用户登录
-   * @param username 用户名
+   * @param phone 手机号
    * @param password 密码
    */
-  async login(username: string, password: string): Promise<User> {
+  async login(phone: string, password: string): Promise<User> {
     try {
-      console.info(`尝试登录，用户名: ${username}`);
+      console.info(`尝试登录，手机号: ${phone}`);
       
       // 调用API服务登录
-      const user = await this.apiService.login(username, password);
-      console.info('登录成功');
+      console.info('调用API服务登录...');
+      const response = await this.apiService.login(phone, password);
+      console.info('API登录响应:', JSON.stringify(response));
       
-      // 保存用户信息至首选项
-      await this.saveUserInfo(user);
+      try {
+        // 尝试保存用户信息至首选项
+        console.info('保存用户信息到本地...');
+        await this.saveUserInfo(response.user);
+        console.info('用户信息保存成功');
+      } catch (saveError) {
+        // 如果保存失败，只记录错误但不影响登录流程
+        console.warn('保存用户信息失败，但登录成功:', saveError);
+      }
       
-      return user;
+      return response.user;
     } catch (error) {
       console.error('登录失败:', error);
       throw new UserServiceError(error instanceof Error ? error.message : String(error));
@@ -58,19 +98,26 @@ export class UserService {
   
   /**
    * 用户注册
-   * @param username 用户名
+   * @param phone 手机号
    * @param password 密码
    * @param email 电子邮箱
+   * @param nickname 昵称
+   * @returns 注册响应，包含用户信息和成功消息
    */
-  async register(username: string, password: string, email: string): Promise<User> {
+  async register(phone: string, password: string, email: string, nickname?: string): Promise<RegisterResponse> {
     try {
-      console.info(`尝试注册，用户名: ${username}`);
+      console.info(`尝试注册，手机号: ${phone}`);
       
       // 调用API服务注册
-      const user = await this.apiService.register(username, password, email);
-      console.info('注册成功');
+      const response = await this.apiService.register(phone, password, email, nickname);
+      console.info(`注册成功，响应: ${JSON.stringify(response)}`);
       
-      return user;
+      // 保存用户信息到本地存储
+      if (response.user) {
+        await this.saveUserInfo(response.user);
+      }
+      
+      return response;
     } catch (error) {
       console.error('注册失败:', error);
       throw new UserServiceError(error instanceof Error ? error.message : String(error));
@@ -113,7 +160,8 @@ export class UserService {
       // 提交更改
       await prefs.flush();
     } catch (err) {
-      console.error(`保存用户信息失败: ${(err as ErrorWithMessage).message}`);
+      console.warn(`保存用户信息失败: ${(err as ErrorWithMessage).message}`);
+      // 将错误转换为 UserServiceError 类型
       throw new UserServiceError(`保存用户信息失败: ${(err as ErrorWithMessage).message}`);
     }
   }
@@ -159,7 +207,7 @@ export class UserService {
    * 更新用户信息
    * @param userData 用户数据
    */
-  async updateUserInfo(userData: Partial<User>): Promise<boolean> {
+  async updateUserInfo(userData: UserUpdateData): Promise<boolean> {
     try {
       // 获取当前用户
       const currentUser = await this.getCurrentUser();
@@ -168,20 +216,26 @@ export class UserService {
       }
       
       // 调用API服务更新用户信息
-      await this.apiService.updateUserInfo(currentUser.id, userData);
+      const success = await this.apiService.updateUserInfo(Number(currentUser.id), {
+        nickname: userData.username,
+        img_url: userData.avatarUrl,
+        email: userData.email
+      });
       
+      if (success) {
       // 更新本地存储的用户信息
-      const updatedUser: User = new User(
+        const updatedUser = new User(
         currentUser.id,
         userData.username || currentUser.username,
         userData.avatarUrl || currentUser.avatarUrl,
         userData.email || currentUser.email,
-        userData.isVerified !== undefined ? userData.isVerified : currentUser.isVerified,
+          userData.isVerified ?? currentUser.isVerified,
         userData.favorites || currentUser.favorites
       );
       await this.saveUserInfo(updatedUser);
+      }
       
-      return true;
+      return success;
     } catch (error) {
       console.error('更新用户信息失败:', error);
       throw new UserServiceError(error instanceof Error ? error.message : String(error));
@@ -301,6 +355,23 @@ export class UserService {
     } catch (error) {
       console.error('获取用户收藏失败:', error);
       throw new UserServiceError(error instanceof Error ? error.message : String(error));
+    }
+  }
+  
+  /**
+   * 获取用户信息
+   */
+  async getUserInfo(): Promise<UserInfo | null> {
+    try {
+      const prefs = await preferences.getPreferences(this.context, UserService.PREFERENCES_NAME);
+      const userInfoStr = await prefs.get(UserService.USER_KEY, '');
+      if (userInfoStr) {
+        return JSON.parse(userInfoStr.toString()) as UserInfo;
+      }
+      return null;
+    } catch (error) {
+      console.error('获取用户信息失败:', error);
+      return null;
     }
   }
 } 

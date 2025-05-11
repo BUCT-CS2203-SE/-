@@ -35,8 +35,12 @@ app.get("/", (req, res) => {
 });
 
 // 导入路由
-require("./routes/artifact.routes")(app);
-require("./routes/user.routes")(app);
+const userRoutes = require("./routes/user.routes");
+const artifactRoutes = require("./routes/artifact.routes");
+
+// 使用路由
+app.use('/api/users', userRoutes);
+app.use('/api/artifacts', artifactRoutes);
 
 // 设置端口
 const PORT = process.env.PORT || 3000;
