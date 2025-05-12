@@ -3,8 +3,8 @@
  */
 const db = require("../models");
 const User = db.User;
-const Comment = db.Comment;
-const Favorite = db.Favorite;
+const RelicComment = db.RelicComment;
+const RelicFavorite = db.RelicFavorite;
 const Artifact = db.Artifact;
 const { Op } = db.Sequelize;
 const bcrypt = require('bcrypt');
@@ -176,18 +176,14 @@ exports.addComment = async (req, res) => {
 
         // 创建评论对象
         const comment = {
-            id: Date.now().toString(),
-            artifactId: parseInt(req.body.artifactId),
-            userId: req.body.userId,
-            username: user.username,
-            avatarUrl: user.avatarUrl || "",
-            content: req.body.content,
-            createTime: now.toISOString(),
-            createTimestamp: now
+            relic_id: parseInt(req.body.artifactId),
+            user_id: req.body.userId,
+            comment: req.body.content,
+            comment_time: now
         };
 
         // 保存到数据库
-        const data = await Comment.create(comment);
+        const data = await RelicComment.create(comment);
 
         res.send(data);
     } catch (err) {
@@ -203,21 +199,28 @@ exports.getComments = async (req, res) => {
         const userId = req.params.id;
 
         // 通过关联查询方式获取评论
-        const user = await User.findByPk(userId, {
-            include: [{
-                model: Comment,
-                as: 'userComments',
-                order: [['createTimestamp', 'DESC']]
-            }]
+        const comments = await RelicComment.findAll({
+            where: { user_id: userId },
+            include: [
+                {
+                    model: Artifact,
+                    as: 'relic'
+                },
+                {
+                    model: User,
+                    as: 'user'
+                }
+            ],
+            order: [['comment_time', 'DESC']]
         });
 
-        if (!user) {
+        if (!comments) {
             return res.status(404).send({
-                message: `未找到ID为 ${userId} 的用户。`
+                message: `未找到ID为 ${userId} 的用户评论。`
             });
         }
 
-        res.send(user.userComments || []);
+        res.send(comments);
     } catch (err) {
         res.status(500).send({
             message: err.message || `获取用户ID为 ${req.params.id} 的评论时发生错误。`
@@ -236,10 +239,10 @@ exports.addFavorite = async (req, res) => {
         }
 
         // 检查是否已收藏
-        const existingFavorite = await Favorite.findOne({
+        const existingFavorite = await RelicFavorite.findOne({
             where: {
-                userId: req.body.userId,
-                artifactId: parseInt(req.body.artifactId)
+                user_id: req.body.userId,
+                relic_id: parseInt(req.body.artifactId)
             }
         });
 
@@ -251,12 +254,12 @@ exports.addFavorite = async (req, res) => {
 
         // 创建收藏对象
         const favorite = {
-            userId: req.body.userId,
-            artifactId: parseInt(req.body.artifactId)
+            user_id: req.body.userId,
+            relic_id: parseInt(req.body.artifactId)
         };
 
         // 保存到数据库
-        const data = await Favorite.create(favorite);
+        const data = await RelicFavorite.create(favorite);
         res.send(data);
     } catch (err) {
         res.status(500).send({
@@ -270,10 +273,10 @@ exports.removeFavorite = async (req, res) => {
     try {
         const { userId, artifactId } = req.params;
 
-        const num = await Favorite.destroy({
+        const num = await RelicFavorite.destroy({
             where: {
-                userId: userId,
-                artifactId: parseInt(artifactId)
+                user_id: userId,
+                relic_id: parseInt(artifactId)
             }
         });
 
@@ -299,28 +302,23 @@ exports.getFavorites = async (req, res) => {
         const userId = req.params.id;
 
         // 通过关联查询方式获取收藏
-        const user = await User.findByPk(userId, {
+        const favorites = await RelicFavorite.findAll({
+            where: { user_id: userId },
             include: [{
-                model: Favorite,
-                as: 'userFavorites',
-                include: [{
-                    model: Artifact
-                }]
-            }]
+                model: Artifact,
+                as: 'relic'
+            }],
+            order: [['favorite_id', 'DESC']]
         });
 
-        if (!user) {
+        if (!favorites) {
             return res.status(404).send({
-                message: `未找到ID为 ${userId} 的用户。`
+                message: `未找到ID为 ${userId} 的用户收藏。`
             });
         }
 
-        if (!user.userFavorites || user.userFavorites.length === 0) {
-            return res.send([]);
-        }
-
         // 提取文物对象
-        const artifacts = user.userFavorites.map(favorite => favorite.artifact).filter(Boolean);
+        const artifacts = favorites.map(favorite => favorite.relic).filter(Boolean);
         res.send(artifacts);
     } catch (err) {
         res.status(500).send({

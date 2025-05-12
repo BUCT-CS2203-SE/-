@@ -1,7 +1,7 @@
 import { Artifact } from '../model/ArtifactModel';
 import { Constants } from '../common/constants/Constants';
 import { ApiService } from './ApiService';
-import { CommentData, UserComment } from '../model/UserModel';
+import { UserRelicComment } from '../model/UserModel';
 
 /**
  * 文物服务错误类
@@ -178,7 +178,7 @@ export class ArtifactService {
   /**
    * 获取文物评论
    */
-  async getArtifactComments(artifactId: string): Promise<CommentData[]> {
+  async getArtifactComments(artifactId: string): Promise<UserRelicComment[]> {
     try {
       console.info(`开始获取文物评论，ID: ${artifactId}`);
       
@@ -191,14 +191,12 @@ export class ArtifactService {
       
       // 返回模拟数据作为兜底方案
       const currentDate = new Date();
-      const mockComment = new UserComment(
+      const mockComment = new UserRelicComment(
         '1',
+        artifactId,
         'user1',
-        '文物爱好者',
-        'https://example.com/avatar1.jpg',
         '这件文物保存非常完好，令人惊叹！',
-        currentDate.toISOString(),
-        artifactId
+        currentDate.toISOString()
       );
       
       return [mockComment];

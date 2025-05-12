@@ -1,4 +1,4 @@
-import { User, UserComment } from '../model/UserModel';
+import { User, UserRelicComment } from '../model/UserModel';
 import { Constants } from '../common/constants/Constants';
 import preferences from '@ohos.data.preferences';
 import { ApiService } from './ApiService';
@@ -17,6 +17,20 @@ class UserServiceError extends Error {
   constructor(message: string) {
     super(message);
   }
+}
+
+/**
+ * API返回的用户数据接口
+ */
+interface ApiUserData {
+  user_id?: number | string;
+  nickname?: string;
+  gender?: number;
+  phone?: string;
+  email?: string;
+  img_url?: string;
+  spare?: string;
+  isVerified?: boolean;
 }
 
 /**
@@ -82,7 +96,19 @@ export class UserService {
       try {
         // 尝试保存用户信息至首选项
         console.info('保存用户信息到本地...');
+        // 确保用户ID存在
+        const userData = JSON.parse(JSON.stringify(response.user)) as ApiUserData;
+        if (!response.user.id && userData.user_id) {
+          const userId = userData.user_id.toString();
+          response.user.id = userId;
+          response.user.user_id = userId;
+        }
+        console.info('用户ID:', response.user.id);
         await this.saveUserInfo(response.user);
+        // 同时保存userId到单独的键
+        const prefs = await preferences.getPreferences(getContext(this), UserService.PREFERENCES_NAME);
+        await prefs.put('userId', response.user.id);
+        await prefs.flush();
         console.info('用户信息保存成功');
       } catch (saveError) {
         // 如果保存失败，只记录错误但不影响登录流程
@@ -134,8 +160,21 @@ export class UserService {
       const prefs = await preferences.getPreferences(context, UserService.PREFERENCES_NAME);
       // 获取用户信息
       const userInfoStr = await prefs.get(UserService.USER_KEY, '');
+      console.info('从存储中获取的用户信息:', userInfoStr);
       if (userInfoStr) {
-        return JSON.parse(userInfoStr.toString()) as User;
+        const user = JSON.parse(userInfoStr.toString()) as User;
+        // 确保用户ID存在
+        const userData = JSON.parse(JSON.stringify(user)) as ApiUserData;
+        if (!user.id && userData.user_id) {
+          const userId = userData.user_id.toString();
+          user.id = userId;
+          user.user_id = userId;
+        }
+        // 同时更新userId键
+        await prefs.put('userId', user.id);
+        await prefs.flush();
+        console.info('解析后的用户信息:', JSON.stringify(user));
+        return user;
       }
       return null;
     } catch (err) {
@@ -153,12 +192,23 @@ export class UserService {
       const context = getContext(this);
       // 获取首选项
       const prefs = await preferences.getPreferences(context, UserService.PREFERENCES_NAME);
+      // 确保用户ID存在
+      const userData = JSON.parse(JSON.stringify(user)) as ApiUserData;
+      if (!user.id && userData.user_id) {
+        const userId = userData.user_id.toString();
+        user.id = userId;
+        user.user_id = userId;
+      }
       // 保存用户信息
+      console.info('正在保存用户信息:', JSON.stringify(user));
       await prefs.put(UserService.USER_KEY, JSON.stringify(user));
       // 保存登录状态
       await prefs.put(UserService.LOGIN_STATE_KEY, true);
+      // 同时保存userId到单独的键
+      await prefs.put('userId', user.id);
       // 提交更改
       await prefs.flush();
+      console.info('用户信息保存完成');
     } catch (err) {
       console.warn(`保存用户信息失败: ${(err as ErrorWithMessage).message}`);
       // 将错误转换为 UserServiceError 类型
@@ -176,6 +226,8 @@ export class UserService {
       const prefs = await preferences.getPreferences(context, UserService.PREFERENCES_NAME);
       // 清除用户信息
       await prefs.delete(UserService.USER_KEY);
+      // 清除userId
+      await prefs.delete('userId');
       // 更新登录状态
       await prefs.put(UserService.LOGIN_STATE_KEY, false);
       // 提交更改
@@ -269,7 +321,7 @@ export class UserService {
    * 获取用户评论
    * @param userId 用户ID，如果不提供则获取当前用户的评论
    */
-  async getComments(userId?: string): Promise<UserComment[]> {
+  async getComments(userId?: string): Promise<UserRelicComment[]> {
     try {
       // 如果未提供用户ID，获取当前用户
       if (!userId) {

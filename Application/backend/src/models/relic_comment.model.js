@@ -2,7 +2,7 @@
  * 文物评论模型
  */
 module.exports = (sequelize, Sequelize) => {
-    const Comment = sequelize.define("user_comment_relic", {
+    const RelicComment = sequelize.define("user_comment_relic", {
         relic_comment_id: {
             type: Sequelize.INTEGER,
             primaryKey: true,
@@ -45,19 +45,30 @@ module.exports = (sequelize, Sequelize) => {
     });
 
     // 定义关联关系
-    Comment.associate = (models) => {
+    RelicComment.associate = (models) => {
         // 与文物信息表的关联
-        Comment.belongsTo(models.RelicInfo, {
+        RelicComment.belongsTo(models.Artifact, {
             foreignKey: 'relic_id',
             as: 'relic'
         });
         
         // 与用户信息表的关联
-        Comment.belongsTo(models.UserInfo, {
+        RelicComment.belongsTo(models.User, {
             foreignKey: 'user_id',
-            as: 'user'
+            as: 'commentUser'
+        });
+
+        // 反向关联
+        models.Artifact.hasMany(RelicComment, {
+            foreignKey: 'relic_id',
+            as: 'relicComments'
+        });
+
+        models.User.hasMany(RelicComment, {
+            foreignKey: 'user_id',
+            as: 'userComments'
         });
     };
 
-    return Comment;
+    return RelicComment;
 }; 

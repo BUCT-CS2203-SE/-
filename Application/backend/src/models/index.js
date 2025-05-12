@@ -27,48 +27,14 @@ const artifactModels = require('./artifact.model.js')(sequelize, Sequelize);
 db.Artifact = artifactModels.Artifact;
 db.ArtifactPhoto = artifactModels.ArtifactPhoto;
 db.User = require('./user.model.js')(sequelize, Sequelize);
-db.Comment = require('./comment.model.js')(sequelize, Sequelize);
-db.Favorite = require('./favorite.model.js')(sequelize, Sequelize);
+db.RelicComment = require('./relic_comment.model.js')(sequelize, Sequelize);
+db.RelicFavorite = require('./relic_favorite.model.js')(sequelize, Sequelize);
 
-// 设置关联关系
-db.Comment.belongsTo(db.Artifact, {
-    foreignKey: 'relic_id',
-    as: 'artifact'
-});
-
-db.Comment.belongsTo(db.User, {
-    foreignKey: 'user_id',
-    as: 'user'
-});
-
-db.Artifact.hasMany(db.Comment, {
-    foreignKey: 'relic_id',
-    as: 'comments'
-});
-
-db.User.hasMany(db.Comment, {
-    foreignKey: 'user_id',
-    as: 'comments'
-});
-
-db.Favorite.belongsTo(db.Artifact, {
-    foreignKey: 'artifactId',
-    as: 'artifact'
-});
-
-db.Favorite.belongsTo(db.User, {
-    foreignKey: 'userId',
-    as: 'user'
-});
-
-db.User.hasMany(db.Favorite, {
-    foreignKey: 'userId',
-    as: 'favorites'
-});
-
-db.Artifact.hasMany(db.Favorite, {
-    foreignKey: 'artifactId',
-    as: 'favorites'
+// 设置模型之间的关联关系
+Object.keys(db).forEach(modelName => {
+  if (db[modelName].associate) {
+    db[modelName].associate(db);
+  }
 });
 
 module.exports = db; 

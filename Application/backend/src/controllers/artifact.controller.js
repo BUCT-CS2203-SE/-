@@ -2,7 +2,7 @@
  * 文物控制器
  */
 const db = require("../models");
-const { Artifact, ArtifactPhoto } = db;
+const { Artifact, ArtifactPhoto, RelicComment } = db;
 const { Op } = require("sequelize");
 
 // 创建文物
@@ -302,22 +302,16 @@ exports.getComments = async (req, res) => {
     try {
         const artifactId = req.params.id;
 
-        // 通过关联查询方式获取评论
-        const artifact = await Artifact.findByPk(artifactId, {
+        const comments = await RelicComment.findAll({
+            where: { relic_id: artifactId },
             include: [{
-                model: db.Comment,
-                as: 'comments',
-                order: [['comment_time', 'DESC']]
-            }]
+                model: db.User,
+                as: 'user'
+            }],
+            order: [['comment_time', 'DESC']]
         });
 
-        if (!artifact) {
-            return res.status(404).json({
-                message: `未找到ID为 ${artifactId} 的文物。`
-            });
-        }
-
-        res.json(artifact.comments || []);
+        res.json(comments);
     } catch (error) {
         console.error('获取文物评论失败:', error);
         res.status(500).json({

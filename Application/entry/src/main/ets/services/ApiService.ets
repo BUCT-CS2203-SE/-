@@ -3,7 +3,7 @@
  */
 import http from '@ohos.net.http';
 import { Artifact } from '../model/ArtifactModel';
-import { UserComment, User } from '../model/UserModel';
+import { User, UserRelicComment, RelicInfo } from '../model/UserModel';
 
 /**
  * API响应数据结构
@@ -133,6 +133,25 @@ interface CommentData {
   content?: string;
   createTime?: string;
   artifactId?: string;
+}
+
+/**
+ * 评论响应数据接口
+ */
+interface CommentResponseData {
+  relic_comment_id: number;
+  relic_id: number;
+  user_id: string;
+  comment: string;
+  comment_time: string;
+}
+
+/**
+ * 评论响应接口
+ */
+interface CommentResponse {
+  message: string;
+  data: CommentResponseData;
 }
 
 /**
@@ -301,6 +320,20 @@ interface RegisterResponse {
   message: string;
     }
 
+/**
+ * 文物评论响应接口
+ */
+interface RelicCommentResponse {
+  relic_comment_id: number;
+  relic_id: number;
+  user_id: number;
+  comment: string;
+  comment_time: string;
+}
+
+/**
+ * API服务类
+ */
 export class ApiService {
   private readonly BASE_URL: string = 'http://localhost:3000/api';
   private readonly TIMEOUT: number = 10000;
@@ -317,7 +350,7 @@ export class ApiService {
       let response = await httpRequest.request(url, options);
       console.info(`收到响应: ${response.result}`);
       
-      if (response.responseCode === 200) {
+      if (response.responseCode === 200 || response.responseCode === 201) {
         const result = JSON.parse(response.result as string) as T;
         console.info(`解析响应数据: ${JSON.stringify(result)}`);
         return result;
@@ -448,29 +481,25 @@ export class ApiService {
   
   /**
    * 获取文物评论
-   * @param artifactId 文物ID
+   * @param relicId 文物ID
    */
-  async getArtifactComments(artifactId: string): Promise<UserComment[]> {
+  async getArtifactComments(relicId: string): Promise<UserRelicComment[]> {
     try {
-      const items = await this.sendRequest<Array<CommentData>>(`/artifacts/${artifactId}/comments`, {
-        method: http.RequestMethod.GET,
-        header: { 'Content-Type': 'application/json' },
-        readTimeout: this.TIMEOUT,
-        connectTimeout: this.TIMEOUT
-      });
+      const response = await this.sendRequest<Array<RelicCommentResponse>>(
+        `${this.BASE_URL}/relic-comments/relic/${relicId}`,
+        this.createRequestOptions(http.RequestMethod.GET)
+      );
       
-      // 将API返回的数据转换为UserComment对象数组
-      return items.map(item => new UserComment(
-        item.id?.toString() || '',
-        item.userId?.toString() || '',
-        item.username?.toString() || '',
-        item.avatarUrl?.toString() || '',
-        item.content?.toString() || '',
-        item.createTime?.toString() || '',
-        item.artifactId?.toString() || ''
+      // 将API返回的数据转换为UserRelicComment对象数组
+      return response.map(item => new UserRelicComment(
+        item.relic_comment_id.toString(),
+        item.relic_id.toString(),
+        item.user_id.toString(),
+        item.comment,
+        item.comment_time
       ));
     } catch (error) {
-      console.error(`获取文物评论失败: ${artifactId}`, error);
+      console.error(`获取文物评论失败: ${relicId}`, error);
       throw new ApiError(error instanceof Error ? error.message : String(error));
     }
   }
@@ -523,8 +552,9 @@ export class ApiService {
       console.info(`注册响应: ${JSON.stringify(userData)}`);
       
       // 将后端返回的用户数据转换为User对象
+      const userId = userData.user_id?.toString() || '';
       const user = new User(
-        userData.user_id?.toString() || '',
+        userId,
         userData.nickname?.toString() || '',
         userData.img_url?.toString() || '',
         userData.email?.toString() || '',
@@ -556,8 +586,9 @@ export class ApiService {
       });
       
       // 将API返回的数据转换为User对象
+      const id = userData.user_id?.toString() || '';
       return new User(
-        userData.user_id?.toString() || '',
+        id,
         userData.nickname?.toString() || '',
         userData.img_url?.toString() || '',
         userData.email?.toString() || '',
@@ -586,35 +617,31 @@ export class ApiService {
   
   /**
    * 添加评论
-   * @param artifactId 文物ID
+   * @param relicId 文物ID
    * @param userId 用户ID
    * @param content 评论内容
    */
-  async addComment(artifactId: string, userId: string, content: string): Promise<UserComment> {
+  async addComment(relicId: string, userId: string, content: string): Promise<UserRelicComment> {
     try {
-      // 创建请求数据
-      const commentData = new RequestData();
-      commentData.setArtifactId(artifactId);
-      commentData.setUserId(userId);
-      commentData.setContent(content);
-      
-      const responseData = await this.sendRequest<CommentData>(
-        `/users/${userId}/comments`,
+      const response = await this.sendRequest<CommentResponse>(
+        `${this.BASE_URL}/relic-comments`,
         this.createRequestOptions(
           http.RequestMethod.POST,
-          JSON.stringify(commentData.toRecord())
+          JSON.stringify({
+            relic_id: relicId,
+            user_id: userId,
+            comment: content
+          })
         )
       );
       
-      // 将API返回的数据转换为UserComment对象
-      return new UserComment(
-        responseData.id?.toString() || '',
-        responseData.userId?.toString() || '',
-        responseData.username?.toString() || '',
-        responseData.avatarUrl?.toString() || '',
-        responseData.content?.toString() || '',
-        responseData.createTime?.toString() || '',
-        responseData.artifactId?.toString() || ''
+      // 将API返回的数据转换为UserRelicComment对象
+      return new UserRelicComment(
+        response.data.relic_comment_id.toString(),
+        response.data.relic_id.toString(),
+        response.data.user_id,
+        response.data.comment,
+        response.data.comment_time
       );
     } catch (error) {
       console.error('添加评论失败', error);
@@ -626,24 +653,20 @@ export class ApiService {
    * 获取用户评论
    * @param userId 用户ID
    */
-  async getUserComments(userId: string): Promise<UserComment[]> {
+  async getUserComments(userId: string): Promise<UserRelicComment[]> {
     try {
-      const items = await this.sendRequest<Array<CommentData>>(`/users/${userId}/comments`, {
-        method: http.RequestMethod.GET,
-        header: { 'Content-Type': 'application/json' },
-        readTimeout: this.TIMEOUT,
-        connectTimeout: this.TIMEOUT
-      });
+      const response = await this.sendRequest<Array<RelicCommentResponse>>(
+        `${this.BASE_URL}/relic-comments/user/${userId}`,
+        this.createRequestOptions(http.RequestMethod.GET)
+      );
       
-      // 将API返回的数据转换为UserComment对象数组
-      return items.map(item => new UserComment(
-        item.id?.toString() || '',
-        item.userId?.toString() || '',
-        item.username?.toString() || '',
-        item.avatarUrl?.toString() || '',
-        item.content?.toString() || '',
-        item.createTime?.toString() || '',
-        item.artifactId?.toString() || ''
+      // 将API返回的数据转换为UserRelicComment对象数组
+      return response.map(item => new UserRelicComment(
+        item.relic_comment_id.toString(),
+        item.relic_id.toString(),
+        item.user_id.toString(),
+        item.comment,
+        item.comment_time
       ));
     } catch (error) {
       console.error(`获取用户评论失败: ${userId}`, error);
@@ -721,6 +744,23 @@ export class ApiService {
     } catch (error) {
       console.error(`获取用户收藏失败: ${userId}`, error);
       throw new ApiError(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  /**
+   * 删除评论
+   * @param commentId 评论ID
+   */
+  async deleteComment(commentId: string): Promise<boolean> {
+    try {
+      const response = await this.sendRequest<CommentResponse>(
+        `${this.BASE_URL}/relic-comments/${commentId}`,
+        this.createRequestOptions(http.RequestMethod.DELETE)
+      );
+      return response.message === '评论删除成功！';
+    } catch (error) {
+      console.error(`删除评论失败: ${error}`);
+      return false;
     }
   }
 } 
