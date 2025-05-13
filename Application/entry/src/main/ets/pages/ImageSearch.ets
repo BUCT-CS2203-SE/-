@@ -10,6 +10,7 @@ import picker from '@ohos.file.picker';
 import fileAccess from '@ohos.file.fs';
 import uri from '@ohos.uri';
 import image from '@ohos.multimedia.image';
+import { BusinessError } from '@ohos.base';
 
 /**
  * 错误接口
@@ -79,7 +80,7 @@ struct ImageSearch {
       // 使用系统相机拍照
       const photoPicker = new picker.PhotoViewPicker();
 
-      // 使用系统选择器拍照 - 由于startCapture不存在，使用select方法
+      // 使用系统选择器拍照
       const result = await photoPicker.select({
         MIMEType: picker.PhotoViewMIMETypes.IMAGE_TYPE,
         maxSelectNumber: 1
@@ -93,7 +94,8 @@ struct ImageSearch {
         promptAction.showToast({ message: this.errorMsg });
       }
     } catch (err) {
-      this.errorMsg = `拍照失败: ${(err as ErrorWithMessage).message}`;
+      const error = err as Error;
+      this.errorMsg = `拍照失败: ${error.message}`;
       promptAction.showToast({ message: this.errorMsg });
       console.error(this.errorMsg);
     }
@@ -121,7 +123,8 @@ struct ImageSearch {
         promptAction.showToast({ message: this.errorMsg });
       }
     } catch (err) {
-      this.errorMsg = `选择图片失败: ${(err as ErrorWithMessage).message}`;
+      const error = err as Error;
+      this.errorMsg = `选择图片失败: ${error.message}`;
       promptAction.showToast({ message: this.errorMsg });
       console.error(this.errorMsg);
     }
@@ -136,47 +139,60 @@ struct ImageSearch {
     try {
       console.info('选中的图片路径:', this.imageUri);
 
-      // 使用URI助手和媒体库处理选中的图片
+      // 使用文件管理API处理图片
       (async () => {
         try {
-          // 使用文件管理API，而不是直接访问文件系统
-
-          // 创建图像包装对象
-          const imageSource: image.ImageSource = image.createImageSource(this.imageUri);
-          if (!imageSource) {
-            throw new Error('无法创建图像源');
+          let imageBase64: string = '';
+          
+          // 读取图片文件并转换为Base64
+          try {
+            // 打开文件并读取内容
+            const resultPhoto = fileAccess.openSync(this.imageUri, fileAccess.OpenMode.READ_ONLY);
+            const fileTemp = fileAccess.openSync(getContext(this).filesDir + '/temp_image.jpg', fileAccess.OpenMode.READ_WRITE | fileAccess.OpenMode.CREATE);
+            const tempPath: string = fileTemp.path;
+            
+            // 复制文件内容
+            fileAccess.copyFileSync(resultPhoto.fd, fileTemp.fd);
+            
+            // 关闭文件
+            fileAccess.closeSync(resultPhoto);
+            fileAccess.closeSync(fileTemp);
+            
+            // 读取文件内容为ArrayBuffer
+            const fileStat = fileAccess.statSync(tempPath);
+            const fileSize = fileStat.size;
+            const fileData = new ArrayBuffer(fileSize);
+            const file = fileAccess.openSync(tempPath, fileAccess.OpenMode.READ_ONLY);
+            fileAccess.readSync(file.fd, fileData);
+            fileAccess.closeSync(file);
+            
+            // 转换为Base64
+            imageBase64 = this.arrayBufferToBase64(fileData);
+            console.info('成功读取图片并转换为Base64');
+          } catch (fileError) {
+            console.error('文件操作失败:', fileError);
+            throw new Error('文件读取失败');
           }
-
-          // 将图像打包为buffer
-          const pixelMap: image.PixelMap = await imageSource.createPixelMap();
-          // 获取pixelMap的数据
-          const pixelMapAccess: number = await pixelMap.getPixelBytesNumber();
-          const arrayBuffer: ArrayBuffer = new ArrayBuffer(pixelMapAccess);
-          await pixelMap.readPixelsToBuffer(arrayBuffer);
-
-          // 转为Base64
-          const base64Data: string = this.arrayBufferToBase64(arrayBuffer);
-          console.info('成功使用图像API读取图片并转换为Base64');
 
           // 使用base64数据
           Promise.all([
-            this.deepseekService.recognizeImage(base64Data)
+            this.deepseekService.recognizeImage(imageBase64)
               .then((keywords: string[]) => {
                 this.searchKeywords = keywords;
               })
               .catch((err: Error) => {
                 console.error('获取关键词失败:', err instanceof Error ? err.message : String(err));
-                this.searchKeywords = ['文物', '古代', '历史文化'];
+                this.searchKeywords = ['青花瓷器'];
               }),
 
-            this.artifactService.searchByImage(base64Data)
+            this.artifactService.searchByImage(imageBase64)
               .then((artifacts: Artifact[]) => {
                 this.searchResults = artifacts;
                 if (artifacts.length === 0) {
                   promptAction.showToast({ message: '未找到相关文物' });
                 }
               })
-              .catch((err: ErrorWithMessage) => {
+              .catch((err: Error) => {
                 this.errorMsg = `搜索失败: ${err.message}`;
                 promptAction.showToast({ message: this.errorMsg });
               })
@@ -184,24 +200,32 @@ struct ImageSearch {
             this.isLoading = false;
           });
         } catch (error) {
-          this.errorMsg = `读取图片失败: ${(error as ErrorWithMessage).message}`;
+          const processError = error as Error;
+          this.errorMsg = `读取图片失败: ${processError.message}`;
           this.isLoading = false;
           promptAction.showToast({ message: this.errorMsg });
-          console.error('图片处理错误:', error);
+          console.error('图片处理错误:', processError);
         }
       })();
     } catch (err) {
-      this.errorMsg = `处理图片失败: ${(err as ErrorWithMessage).message}`;
+      const mainError = err as Error;
+      this.errorMsg = `处理图片失败: ${mainError.message}`;
       this.isLoading = false;
       promptAction.showToast({ message: this.errorMsg });
-      console.error('图片处理主错误:', err);
+      console.error('图片处理主错误:', mainError);
     }
   }
 
-  // ArrayBuffer转Base64
+  // 修改ArrayBuffer转Base64方法，使用更标准的方式
   private arrayBufferToBase64(buffer: ArrayBuffer): string {
-    const bytes = new Uint8Array(buffer);
-    const binary = bytes.reduce((acc: string, byte: number) => acc + String.fromCharCode(byte), '');
+    const uint8Array = new Uint8Array(buffer);
+    let binary = '';
+    
+    // 使用for循环构建字符串
+    for (let i = 0; i < uint8Array.length; i++) {
+      binary += String.fromCharCode(uint8Array[i]);
+    }
+    
     return binary;
   }
 
@@ -296,9 +320,13 @@ struct ImageSearch {
               .backgroundColor('#8B0000')  // 深红色
               .fontColor('#FFFFFF')
               .borderRadius(25)
+              .margin({ right: 10 })
               .onClick(() => {
                 this.selectFromGallery();
               })
+
+            // 新增本地图片测试按钮
+
           }
           .width('90%')
           .margin({ bottom: 20 })

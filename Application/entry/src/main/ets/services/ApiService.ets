@@ -335,7 +335,7 @@ interface RelicCommentResponse {
  * API服务类
  */
 export class ApiService {
-  private readonly BASE_URL: string = 'http://localhost:3000/api';
+  private readonly BASE_URL: string = 'http://101.43.234.152:3000/api';
   private readonly TIMEOUT: number = 10000;
   
   constructor() {
