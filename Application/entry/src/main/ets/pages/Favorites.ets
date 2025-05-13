@@ -1,54 +1,74 @@
 import router from '@ohos.router';
 import prompt from '@ohos.prompt';
-
-// 定义收藏项的接口
-interface FavoriteItem {
-  id: number;
-  name: string;
-  dynasty: string;
-  museum: string;
-  imageUrl: Resource;
-}
+import { RelicFavoriteService } from '../services/RelicFavoriteService';
+import { UserService } from '../services/UserService';
+import { FavoriteItem } from '../model/ArtifactModel';
 
 @Entry
 @Component
 struct Favorites {
   @State searchText: string = '';
-  @State favorites: FavoriteItem[] = [
-    {
-      id: 1,
-      name: '青花瓷瓶',
-      dynasty: '明朝',
-      museum: '故宫博物院',
-      imageUrl: $r('app.media.cultural_heritage_logo')
-    },
-    {
-      id: 2,
-      name: '金缕玉衣',
-      dynasty: '汉朝',
-      museum: '南京博物院',
-      imageUrl: $r('app.media.cultural_heritage_logo')
-    },
-    // 可以添加更多收藏项
-  ];
-  @State filteredFavorites: FavoriteItem[] = this.favorites;
-  @State isLoading: boolean = false;
+  @State favorites: FavoriteItem[] = [];
+  @State filteredFavorites: FavoriteItem[] = [];
+  @State isLoading: boolean = true;
   @State showSearch: boolean = false;
   @State currentTab: number = 1; // 0: 展览, 1: 藏品
+  @State isLoggedIn: boolean = false;
 
-  // 执行搜索
+  private favoriteService: RelicFavoriteService = new RelicFavoriteService();
+  private userService: UserService = new UserService();
+
+  aboutToAppear() {
+    this.checkLoginStatus();
+  }
+
+  async checkLoginStatus() {
+    try {
+      this.isLoggedIn = await this.userService.isLoggedIn();
+      if (this.isLoggedIn) {
+        const currentUser = await this.userService.getCurrentUser();
+        if (currentUser) {
+          await this.loadUserFavorites(currentUser.id);
+        }
+      } else {
+        this.favorites = [];
+        this.filteredFavorites = [];
+      }
+    } catch (error) {
+      console.error('检查登录状态失败:', error);
+      this.isLoggedIn = false;
+      this.favorites = [];
+      this.filteredFavorites = [];
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  async loadUserFavorites(userId: string) {
+    this.isLoading = true;
+    try {
+      const favorites = await this.favoriteService.getUserFavorites(userId);
+      this.favorites = favorites;
+      this.filteredFavorites = favorites;
+    } catch (error) {
+      console.error('加载收藏失败:', error);
+      this.favorites = [];
+      this.filteredFavorites = [];
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
   performSearch() {
     if (!this.searchText.trim()) {
       this.filteredFavorites = this.favorites;
       return;
     }
-
     this.isLoading = true;
-    // 模拟API调用
     setTimeout(() => {
       this.filteredFavorites = this.favorites.filter(item => 
         item.name.toLowerCase().includes(this.searchText.toLowerCase()) ||
-        item.dynasty.toLowerCase().includes(this.searchText.toLowerCase()) ||
+        item.era.toLowerCase().includes(this.searchText.toLowerCase()) ||
         item.museum.toLowerCase().includes(this.searchText.toLowerCase())
       );
       this.isLoading = false;
@@ -56,13 +76,12 @@ struct Favorites {
   }
 
   @Builder
-  TabBuilder(index: number, name: string, count: number) {
+  TabBuilder(index: number, name: string) {
     Column() {
-      Text(name + ` (${count})`)
+      Text(name)
         .fontSize(16)
         .fontColor(this.currentTab === index ? '#8B1A1A' : '#666666')
         .fontWeight(this.currentTab === index ? FontWeight.Bold : FontWeight.Normal)
-      
       if (this.currentTab === index) {
         Row()
           .width(24)
@@ -97,6 +116,66 @@ struct Favorites {
     }
     .width('100%')
     .layoutWeight(1)
+  }
+
+  @Builder
+  LoadingBuilder() {
+    Column() {
+      LoadingProgress()
+        .width(24)
+        .height(24)
+        .color('#8B1A1A')
+      
+      Text('加载中...')
+        .fontSize(14)
+        .fontColor('#666666')
+        .margin({ top: 8 })
+    }
+    .width('100%')
+    .layoutWeight(1)
+    .justifyContent(FlexAlign.Center)
+  }
+
+  @Builder
+  FavoriteItemCard(item: FavoriteItem) {
+    Row() {
+      Image(item.imageUrl)
+        .width(100)
+        .height(100)
+        .objectFit(ImageFit.Cover)
+        .borderRadius(8)
+        .backgroundColor('#F5F5F5')
+        .onError(() => {
+          console.error(`图片加载失败: ${item.imageUrl}`);
+        })
+      Column() {
+        Text(item.name)
+          .fontSize(18)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#333333')
+        Text(item.era)
+          .fontSize(14)
+          .fontColor('#666666')
+          .margin({ top: 8 })
+        Text(item.museum)
+          .fontSize(14)
+          .fontColor('#666666')
+          .margin({ top: 4 })
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
+      .margin({ left: 16 })
+    }
+    .width('100%')
+    .padding(16)
+    .backgroundColor('#FFFFFF')
+    .borderRadius(12)
+    .onClick(() => {
+      router.pushUrl({
+        url: 'pages/ArtifactDetail',
+        params: { artifactId: item.id.toString() }
+      });
+    })
   }
 
   build() {
@@ -137,12 +216,12 @@ struct Favorites {
       // 导航栏
       Row() {
         Row() {
-          this.TabBuilder(1, '藏品', this.favorites.length)
+          this.TabBuilder(1, '藏品')
         }
         .layoutWeight(1)
 
         Row() {
-          this.TabBuilder(0, '朋友圈', 0)
+          this.TabBuilder(0, '朋友圈')
         }
         .layoutWeight(1)
       }
@@ -189,16 +268,11 @@ struct Favorites {
       }
 
       // 加载指示器
-      if (this.isLoading) {
-        LoadingProgress()
-          .width(50)
-          .height(50)
-          .color('#8B1A1A')
-          .margin({ top: 20 })
-      }
-
-      // 内容区域
-      if (this.currentTab === 0) {
+      if (!this.isLoggedIn) {
+        this.EmptyStateBuilder()
+      } else if (this.isLoading) {
+        this.LoadingBuilder()
+      } else if (this.currentTab === 0) {
         // 展览页面
         this.EmptyStateBuilder()
       } else {
@@ -207,43 +281,7 @@ struct Favorites {
           List() {
             ForEach(this.filteredFavorites, (item: FavoriteItem) => {
               ListItem() {
-                Row() {
-                  Image(item.imageUrl)
-                    .width(100)
-                    .height(100)
-                    .objectFit(ImageFit.Cover)
-                    .borderRadius(8)
-                  
-                  Column() {
-                    Text(item.name)
-                      .fontSize(18)
-                      .fontWeight(FontWeight.Bold)
-                      .fontColor('#333333')
-                    
-                    Text(item.dynasty)
-                      .fontSize(14)
-                      .fontColor('#666666')
-                      .margin({ top: 8 })
-                    
-                    Text(item.museum)
-                      .fontSize(14)
-                      .fontColor('#666666')
-                      .margin({ top: 4 })
-                  }
-                  .alignItems(HorizontalAlign.Start)
-                  .layoutWeight(1)
-                  .margin({ left: 16 })
-                }
-                .width('100%')
-                .padding(16)
-                .backgroundColor('#FFFFFF')
-                .borderRadius(12)
-                .onClick(() => {
-                  router.pushUrl({
-                    url: 'pages/ArtifactDetail',
-                    params: { id: item.id }
-                  });
-                })
+                this.FavoriteItemCard(item)
               }
               .margin({ bottom: 12 })
             })
