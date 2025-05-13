@@ -1,6 +1,8 @@
 /**
  * 应用常量定义
  */
+import common from '@ohos.app.ability.common';
+import '@ohos.app.ability.UIAbility';
 
 /**
  * 标签类型定义
@@ -28,7 +30,7 @@ export class Constants {
   /**
    * API基础URL
    */
-  static readonly BASE_URL: string = 'http://your-api-server.com/api';
+  static readonly BASE_URL: string = 'http://localhost:3000/api';
   
   /**
    * 首页Tab配置
@@ -50,4 +52,11 @@ export class Constants {
     { id: 4, name: '书画' },
     { id: 5, name: '雕塑' }
   ];
+
+  /**
+   * 获取Context实例
+   */
+  static getContext(): common.Context {
+    return getContext() as common.Context;
+  }
 } 

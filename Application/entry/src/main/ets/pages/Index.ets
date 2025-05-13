@@ -5,6 +5,12 @@ import { Artifact } from '../model/ArtifactModel';
 import { ArtifactService } from '../services/ArtifactService';
 import prompt from '@ohos.prompt';
 import picker from '@ohos.file.picker';
+import { UserService } from '../services/UserService';
+import { UserInfo } from '../services/UserService';
+import { PostService } from '../services/PostService';
+import { CommentService } from '../services/CommentService';
+import { Post as PostModel, Comment as CommentModel } from '../model/PostModel';
+import { CommentData } from '../model/CommentModel';
 
 /**
  * 动态帖子接口
@@ -37,6 +43,34 @@ interface Sheet {
   action: () => void;
 }
 
+/**
+ * 评论数据接口，用于创建评论
+ */
+interface CommentInputData {
+  comment_id: string;
+  post_id: string;
+  user_id: number;
+  nickname: string;
+  img_url?: string;
+  content: string;
+  create_time: string;
+  create_timestamp: number;
+}
+
+/**
+ * 评论响应接口，用于处理服务器返回的评论数据
+ */
+interface CommentResponse {
+  comment_id: string;
+  post_id: string;
+  user_id: number;
+  nickname: string;
+  img_url?: string;
+  content: string;
+  create_time: string;
+  create_timestamp: number;
+}
+
 @Entry
 @Component
 struct Index {
@@ -45,13 +79,25 @@ struct Index {
   @State searchResults: Artifact[] = [];
   @State isLoading: boolean = false;
   @State posts: Array<Post> = [];
+  @State realPosts: Array<PostModel> = []; // 真实的帖子数据
   @State favoritePosts: Set<number> = new Set();
   @State selectedImages: Resource[] = [];
   @State newPostContent: string = '';
   @State artifacts: Artifact[] = [];
   @State isArtifactsLoading: boolean = false;
   @State selectedCategory: CategoryItem = { id: 0, name: '全部' };
+  @State userInfo: UserInfo | null = null;
+  @State isPostsLoading: boolean = false;
+  @State showCommentInput: boolean = false;
+  @State currentPostId: string = '';
+  @State commentContent: string = '';
+  @State currentPage: number = 1;
+  @State pageSize: number = 10;
+  @State hasMoreData: boolean = true;
+  
   private artifactService: ArtifactService = new ArtifactService();
+  private userService: UserService = new UserService();
+  private scroller: Scroller = new Scroller();
 
   build() {
     Column() {
@@ -86,7 +132,7 @@ struct Index {
         
         // 我的Tab
         TabContent() {
-          this.buildProfilePage()
+          this.buildUserProfilePage()
         }
         .tabBar(this.TabBuilder(4, '我的', 'person'))
       }
@@ -295,16 +341,7 @@ struct Index {
                     .height(180)
                     .objectFit(ImageFit.Cover)
                     .borderRadius({ topLeft: 8, topRight: 8 })
-                  
-                  Row() {
-                    Text(artifact.museum)
-                      .fontSize(12)
-                      .fontColor('#FFFFFF')
-                      .backgroundColor('#00000080')
-                      .borderRadius(10)
-                      .padding({ left: 8, right: 8, top: 2, bottom: 2 })
-                  }
-                  .position({ x: 5, y: 5 })
+
                 }
                 .width('100%')
                 
@@ -316,24 +353,19 @@ struct Index {
                     .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                     .width('100%')
-                  
+
                   Row() {
                     Text(`${artifact.era}`)
                       .fontSize(14)
                       .fontColor('#666666')
-                      .layoutWeight(1)
-                    
-                    Row() {
-                      Image($r('app.media.like'))
-                        .width(16)
-                        .height(16)
-                        .fillColor('#666666')
-                      
-                      Text(`${artifact.likes}`)
-                        .fontSize(12)
-                        .fontColor('#666666')
-                        .margin({ left: 2 })
-                    }
+                      .margin({ right: 8 })
+                    Text(artifact.museum)
+                      .fontSize(14)
+                      .fontColor('#666666')
+                      .backgroundColor('#00000010')
+                      .borderRadius(10)
+                      .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+                      .margin({ right: 8 })
                   }
                   .width('100%')
                   .margin({ top: 5 })
@@ -355,9 +387,9 @@ struct Index {
           })
         }
         .columnsTemplate('1fr 1fr')  // 两列布局
-        .columnsGap(10)  // 列间距
-        .rowsGap(10)  // 行间距
-        .width('90%')
+        .columnsGap(12)  // 列间距（可适当加大）
+        .rowsGap(12)  // 行间距（可适当加大）
+        .width('100%')  // 这里改成100%
         .layoutWeight(1)
       } 
       // 无数据状态
@@ -634,7 +666,7 @@ struct Index {
     Column() {
       // 顶部栏
       Row() {
-        Text('动态')
+        Text('社区动态')
           .fontSize(24)
           .fontWeight(FontWeight.Bold)
           .layoutWeight(1)
@@ -649,7 +681,10 @@ struct Index {
           .borderRadius(15)
           .onClick(() => {
             router.pushUrl({
-              url: 'pages/Dynamic'
+              url: 'pages/Dynamic',
+              params: {
+                isPostOnly: true // 标记仅用于发表帖子
+              }
             });
           })
       }
@@ -659,43 +694,163 @@ struct Index {
       .borderRadius({ bottomLeft: 10, bottomRight: 10 })
       .shadow({ radius: 2, color: '#00000010', offsetX: 0, offsetY: 2 })
 
+      // 下拉刷新提示
+      if (this.isPostsLoading && this.realPosts.length === 0) {
+        Column() {
+          LoadingProgress()
+            .width(50)
+            .height(50)
+            .color('#1698CE')
+          
+          Text('正在加载动态内容...')
+            .fontSize(16)
+            .margin({ top: 10 })
+        }
+        .width('100%')
+        .height(300)
+        .justifyContent(FlexAlign.Center)
+      } 
       // 动态列表
-      List({ space: 10 }) {
-        ForEach(this.posts, (post: Post) => {
+      else if (this.realPosts.length === 0) {
+        Column() {
+          Image($r('app.media.empty_image'))
+            .width(100)
+            .height(100)
+            .margin({ bottom: 20 })
+          
+          Text('暂无动态内容')
+            .fontSize(16)
+            .fontColor('#999999')
+            .margin({ bottom: 10 })
+          
+          Button('去发表第一条动态', { type: ButtonType.Normal })
+            .backgroundColor('#1698CE')
+            .fontColor('#FFFFFF')
+            .borderRadius(20)
+            .onClick(() => {
+              router.pushUrl({
+                url: 'pages/Dynamic',
+                params: {
+                  isPostOnly: true // 标记仅用于发表帖子
+                }
+              });
+            })
+        }
+        .width('100%')
+        .height(300)
+        .justifyContent(FlexAlign.Center)
+      } else {
+        List({ space: 10, scroller: this.scroller }) {
+          ForEach(this.realPosts, (post: PostModel, index: number) => {
           ListItem() {
-            this.PostBuilder(post)
+              this.RealPostBuilder(post, index)
           }
         })
+          
+          // 加载中提示
+          if (this.isPostsLoading) {
+            ListItem() {
+              Row() {
+                LoadingProgress()
+                  .width(24)
+                  .height(24)
+                  .color('#1698CE')
+                Text('加载中...')
+                  .fontSize(14)
+                  .fontColor('#999999')
+                  .margin({ left: 10 })
+              }
+              .width('100%')
+              .justifyContent(FlexAlign.Center)
+              .padding(16)
+            }
+          }
+          
+          // 没有更多数据提示
+          if (!this.hasMoreData && this.realPosts.length > 0) {
+            ListItem() {
+              Text('已经到底了')
+                .fontSize(14)
+                .fontColor('#999999')
+                .width('100%')
+                .textAlign(TextAlign.Center)
+                .padding(16)
+            }
+          }
       }
       .width('100%')
       .layoutWeight(1)
+        .onReachEnd(() => {
+          if (!this.isPostsLoading && this.hasMoreData) {
+            this.loadPosts();
+          }
+        })
+        .onScrollFrameBegin((offset: number) => {
+          if (offset <= -100 && !this.isPostsLoading) {
+            this.loadPosts(true);
+          }
+          return { offsetRemain: 0 };
+        })
+      }
+      
+      // 评论输入框
+      if (this.showCommentInput) {
+        Column() {
+          Row() {
+            TextInput({ placeholder: '说点什么...', text: this.commentContent })
+              .width('75%')
+              .height(40)
+              .backgroundColor('#F5F5F5')
+              .borderRadius(20)
+              .padding({ left: 12, right: 12 })
+              .onChange((value: string) => {
+                this.commentContent = value;
+              })
+
+            Button('发送', { type: ButtonType.Normal })
+              .width('20%')
+              .height(40)
+              .backgroundColor('#1698CE')
+              .fontColor('#FFFFFF')
+              .borderRadius(20)
+              .onClick(() => {
+                this.addComment(this.currentPostId);
+              })
+          }
+          .width('100%')
+          .justifyContent(FlexAlign.SpaceBetween)
+          .padding(16)
+        }
+        .width('100%')
+        .backgroundColor('#FFFFFF')
+      }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#FFF5F5')  // 浅红色背景
+    .backgroundColor('#F5F5F5')
     .padding({ bottom: 56 })
   }
   
   @Builder
-  PostBuilder(post: Post) {
+  RealPostBuilder(post: PostModel, index: number) {
     Column() {
       // 用户信息和发布时间
       Row() {
         // 用户头像
-        Image(post.avatarUrl || $r('app.media.icon'))
+        Image(post.img_url || $r('app.media.icon'))
           .width(40)
           .height(40)
           .borderRadius(20)
           .margin({ right: 10 })
         
         Column() {
-          // 用户名
-          Text(post.username)
+          // 用户昵称
+          Text(post.nickname)
             .fontSize(16)
             .fontWeight(FontWeight.Bold)
           
           // 发布时间
-          Text(post.createTime)
+          Text(post.create_time)
             .fontSize(12)
             .fontColor('#999999')
         }
@@ -712,24 +867,12 @@ struct Index {
         .margin({ bottom: 10 })
 
       // 图片展示
-      if (post.images && post.images.length > 0) {
-        Grid() {
-          ForEach(post.images, (image: Resource) => {
-            GridItem() {
-              Image($r('app.media.cultural_heritage_logo'))
+      if (post.post_img_url) {
+        Image(post.post_img_url)
                 .width('100%')
-                .height('100%')
+          .height(200)
                 .objectFit(ImageFit.Cover)
                 .borderRadius(8)
-            }
-          })
-        }
-        .columnsTemplate('1fr')
-        .rowsTemplate('1fr')
-        .columnsGap(5)
-        .rowsGap(5)
-        .width('100%')
-        .height(300)
         .margin({ bottom: 10 })
       }
 
@@ -737,16 +880,15 @@ struct Index {
       Row() {
         // 点赞按钮
         Row() {
-          Text(post.isLiked ? '♥' : '♡')
+          Text(post.is_favorited === 1 ? '♥' : '♡')
             .fontSize(20)
-            .fontColor(post.isLiked ? '#FF0000' : '#666666')
+            .fontColor(post.is_favorited === 1 ? '#FF0000' : '#666666')
           Text(post.likes.toString())
             .fontSize(14)
             .margin({ left: 5 })
         }
         .onClick(() => {
-          post.isLiked = !post.isLiked;
-          post.likes += post.isLiked ? 1 : -1;
+          this.likePost(post, index);
         })
         .margin({ right: 20 })
 
@@ -754,26 +896,24 @@ struct Index {
         Row() {
           Text('💬')
             .fontSize(20)
-          Text(post.comments.length.toString())
+          Text(post.comments ? post.comments.length.toString() : '0')
             .fontSize(14)
             .margin({ left: 5 })
         }
+        .onClick(() => {
+          this.currentPostId = post.post_id;
+          this.showCommentInput = true;
+        })
         .margin({ right: 20 })
 
         // 收藏按钮
         Row() {
-          Text(this.favoritePosts.has(post.id) ? '★' : '☆')
+          Text(post.is_favorited === 1 ? '★' : '☆')
             .fontSize(20)
-            .fontColor(this.favoritePosts.has(post.id) ? '#FFD700' : '#666666')
+            .fontColor(post.is_favorited === 1 ? '#FFD700' : '#666666')
         }
         .onClick(() => {
-          if (this.favoritePosts.has(post.id)) {
-            this.favoritePosts.delete(post.id);
-            prompt.showToast({ message: '已取消收藏' });
-          } else {
-            this.favoritePosts.add(post.id);
-            prompt.showToast({ message: '已收藏' });
-          }
+          this.toggleFavorite(post, index);
         })
       }
       .width('100%')
@@ -781,24 +921,17 @@ struct Index {
       .margin({ bottom: 10 })
 
       // 评论列表
-      if (post.comments.length > 0) {
+      if (post.comments && post.comments.length > 0) {
         Column() {
-          ForEach(post.comments, (comment: Comment) => {
+          ForEach(post.comments, (comment: CommentModel) => {
             Row() {
-              Column() {
-                Row() {
-                  Text(comment.username)
+              Text(comment.nickname || '匿名用户')
                     .fontSize(14)
                     .fontWeight(FontWeight.Bold)
                     .fontColor('#1698CE')
-                  Text(comment.content)
+              Text(comment.content || '')
                     .fontSize(14)
                     .margin({ left: 5 })
-                }
-                .width('100%')
-                .justifyContent(FlexAlign.Start)
-              }
-              .layoutWeight(1)
             }
             .width('100%')
             .justifyContent(FlexAlign.Start)
@@ -818,61 +951,175 @@ struct Index {
     .margin({ bottom: 10 })
   }
   
-  @Builder
-  buildProfilePage() {
-    Column() {
-      Text('个人中心').fontSize(24).fontWeight(FontWeight.Bold).margin({ top: 20, bottom: 20 })
-      // 这里实现个人中心页面
-      Column() {
-        // 用户信息区域
-        Row() {
-          Image($r('app.media.icon'))
-            .width(80)
-            .height(80)
-            .borderRadius(40)
-          
-          Column() {
-            Text('用户名').fontSize(18).fontWeight(FontWeight.Bold)
-            Text('点击登录').fontSize(14).margin({ top: 5 })
-          }
-          .alignItems(HorizontalAlign.Start)
-          .margin({ left: 20 })
+  // 添加点赞方法
+  async likePost(post: PostModel, index: number) {
+    try {
+      if (post.is_favorited === 1) {
+        const result = await PostService.unlikePost(post.post_id);
+        if (result.code === 0 && result.data) {
+          this.realPosts[index].likes = result.data.likes;
+          this.realPosts[index].is_favorited = 0;
+          this.realPosts = [...this.realPosts]; // 触发UI更新
         }
-        .width('90%')
-        .padding(16)
-        .backgroundColor('#FFFFFF')
-        .borderRadius(10)
-        .margin({ bottom: 20 })
-        .onClick(() => {
-          router.pushUrl({
-            url: 'pages/Login'
-          });
-        })
-        
-        // 功能区域
-        Column() {
-          this.buildProfileItem('我的收藏', 'like')
-          Divider().width('100%').height(1).color('#F0F0F0')
-          this.buildProfileItem('浏览历史', 'history')
-          Divider().width('100%').height(1).color('#F0F0F0')
-          this.buildProfileItem('我的评论', 'comment')
-          Divider().width('100%').height(1).color('#F0F0F0')
-          this.buildProfileItem('设置', 'settings')
+      } else {
+        const result = await PostService.likePost(post.post_id);
+        if (result.code === 0 && result.data) {
+          this.realPosts[index].likes = result.data.likes;
+          this.realPosts[index].is_favorited = 1;
+          this.realPosts = [...this.realPosts]; // 触发UI更新
         }
-        .width('90%')
-        .backgroundColor('#FFFFFF')
-        .borderRadius(10)
-        .padding(16)
       }
+    } catch (error) {
+      console.error('更新点赞状态失败:', error);
+      prompt.showToast({ message: '操作失败，请稍后重试' });
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor('#F0F0F0')
-    .padding({ bottom: 56 })
+  }
+
+  // 添加收藏/取消收藏方法
+  async toggleFavorite(post: PostModel, index: number) {
+    try {
+      const newState = post.is_favorited === 0;
+      const result = await PostService.updateFavorite(post.post_id, newState);
+      if (result.code === 0 && result.data !== undefined) {
+        this.realPosts[index].is_favorited = result.data.is_favorited ? 1 : 0;
+        this.realPosts = [...this.realPosts]; // 触发UI更新
+        prompt.showToast({ message: result.data.is_favorited ? '收藏成功' : '取消收藏成功' });
+      }
+    } catch (error) {
+      console.error('更新收藏状态失败:', error);
+      prompt.showToast({ message: '操作失败，请稍后重试' });
+    }
+  }
+
+  // 添加评论方法
+  async addComment(postId: string) {
+    if (!this.commentContent.trim()) {
+      prompt.showToast({ message: '请输入评论内容' });
+      return;
+    }
+
+    try {
+      const userInfo = await this.userService.getUserInfo();
+      if (!userInfo) {
+        prompt.showToast({ message: '请先登录' });
+        return;
+      }
+
+      // 获取用户ID，尝试不同的属性
+      const userId = userInfo.user_id || (userInfo.id ? parseInt(userInfo.id) : 0);
+      const nickname = userInfo.nickname || '匿名用户';
+      
+      const now = new Date();
+      const commentData: CommentData = {
+        comment_id: `comment_${now.getTime()}`,
+        post_id: postId,
+        user_id: userId,
+        nickname: nickname,
+        img_url: userInfo.img_url,
+        content: this.commentContent,
+        create_time: this.formatDate(now, 'YYYY-MM-DD HH:mm:ss'),
+        create_timestamp: now.getTime()
+      };
+
+      const result = await CommentService.addComment(commentData);
+      if (result.code === 0 && result.data) {
+        prompt.showToast({ message: '评论成功' });
+        this.commentContent = '';
+        this.showCommentInput = false;
+        
+        // 更新本地帖子评论数据
+        const postIndex = this.realPosts.findIndex(post => post.post_id === postId);
+        if (postIndex !== -1 && this.realPosts[postIndex]) {
+          // 确保comments数组已初始化
+          if (!this.realPosts[postIndex].comments) {
+            this.realPosts[postIndex].comments = [];
+          }
+          
+          // 创建一个明确的CommentModel对象，避免结构类型
+          const newComment: CommentModel = {
+            comment_id: result.data.comment_id,
+            post_id: result.data.post_id,
+            user_id: result.data.user_id,
+            nickname: result.data.nickname,
+            content: result.data.content,
+            create_time: result.data.create_time,
+            create_timestamp: result.data.create_timestamp
+          };
+          
+          // 可选属性单独处理
+          if (result.data.img_url) {
+            newComment.img_url = result.data.img_url;
+          }
+          
+          // 直接使用comments数组，因为我们已确保它存在
+          this.realPosts[postIndex].comments!.unshift(newComment);
+          this.realPosts = [...this.realPosts]; // 触发UI更新
+        }
+      } else {
+        prompt.showToast({ message: result.message || '评论失败' });
+      }
+    } catch (error) {
+      console.error('发布评论失败:', error);
+      prompt.showToast({ message: '评论失败，请稍后重试' });
+    }
+  }
+
+  // 加载帖子方法
+  async loadPosts(isRefresh: boolean = false) {
+    if (isRefresh) {
+      this.currentPage = 1;
+    }
+    
+    if (!this.hasMoreData && !isRefresh) {
+      return;
+    }
+
+    this.isPostsLoading = true;
+    try {
+      const response = await PostService.getPosts(this.currentPage, this.pageSize);
+      
+      if (isRefresh) {
+        this.realPosts = response.data;
+      } else {
+        this.realPosts = [...this.realPosts, ...response.data];
+      }
+      
+      this.hasMoreData = this.realPosts.length < response.total;
+      this.currentPage++;
+    } catch (error) {
+      console.error('获取帖子列表失败:', error);
+      prompt.showToast({ message: '获取帖子失败，请稍后重试' });
+    } finally {
+      this.isPostsLoading = false;
+    }
+  }
+
+  // 日期格式化方法
+  private formatDate(date: Date, format: string): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    
+    return format
+      .replace('YYYY', String(year))
+      .replace('MM', month)
+      .replace('DD', day)
+      .replace('HH', hours)
+      .replace('mm', minutes)
+      .replace('ss', seconds);
   }
 
   aboutToAppear() {
-    // 添加示例动态数据
+    // 获取用户信息
+    this.loadUserInfo();
+    
+    // 加载帖子数据
+    this.loadPosts();
+    
+    // 示例动态数据 - 你可以保留这部分作为备用
     this.posts = [
       {
         id: 1,
@@ -915,6 +1162,16 @@ struct Index {
     // 加载文物数据
     this.loadArtifacts();
   }
+  
+  private async loadUserInfo() {
+    try {
+      this.userInfo = await this.userService.getUserInfo();
+      console.info('用户信息加载成功:', JSON.stringify(this.userInfo));
+    } catch (error) {
+      console.error('加载用户信息失败:', error);
+      this.userInfo = null;
+    }
+  }
 
   // 添加加载文物方法
   private loadArtifacts() {
@@ -930,5 +1187,101 @@ struct Index {
         console.error('加载文物失败:', err);
         this.isArtifactsLoading = false;
       });
+  }
+  
+  @Builder
+  buildUserProfilePage() {
+    Column() {
+      Text('个人中心').fontSize(24).fontWeight(FontWeight.Bold).margin({ top: 20, bottom: 20 })
+      
+      Column() {
+        // 用户信息区域
+        Row() {
+          if (this.userInfo) {
+            // 显示用户头像
+            Image(this.userInfo.img_url || $r('app.media.icon'))
+              .width(80)
+              .height(80)
+              .borderRadius(40)
+              .objectFit(ImageFit.Cover)
+            
+            Column() {
+              Text(this.userInfo.nickname || '未设置昵称')
+                .fontSize(18)
+                .fontWeight(FontWeight.Bold)
+              Text(this.userInfo.phone || '未绑定手机号')
+                .fontSize(14)
+                .margin({ top: 5 })
+            }
+            .alignItems(HorizontalAlign.Start)
+            .margin({ left: 20 })
+          } else {
+            // 未登录状态
+            Image($r('app.media.icon'))
+              .width(80)
+              .height(80)
+              .borderRadius(40)
+            
+            Column() {
+              Text('未登录')
+                .fontSize(18)
+                .fontWeight(FontWeight.Bold)
+              Text('点击登录')
+                .fontSize(14)
+                .margin({ top: 5 })
+            }
+            .alignItems(HorizontalAlign.Start)
+            .margin({ left: 20 })
+          }
+        }
+        .width('90%')
+        .padding(16)
+        .backgroundColor('#FFFFFF')
+        .borderRadius(10)
+        .margin({ bottom: 20 })
+        .onClick(() => {
+          if (!this.userInfo) {
+            router.pushUrl({
+              url: 'pages/Login'
+            });
+          }
+        })
+        
+        // 功能区域
+        Column() {
+          this.buildProfileItem('我的收藏', 'like')
+          Divider().width('100%').height(1).color('#F0F0F0')
+          this.buildProfileItem('浏览历史', 'history')
+          Divider().width('100%').height(1).color('#F0F0F0')
+          this.buildProfileItem('我的评论', 'comment')
+          Divider().width('100%').height(1).color('#F0F0F0')
+          this.buildProfileItem('设置', 'settings')
+          
+          // 如果已登录，显示退出登录按钮
+          if (this.userInfo) {
+            Divider().width('100%').height(1).color('#F0F0F0')
+            Button('退出登录', { type: ButtonType.Normal })
+              .width('100%')
+              .height(50)
+              .backgroundColor('#8B1A1A')
+              .fontColor('#FFFFFF')
+              .margin({ top: 20 })
+              .onClick(() => {
+                this.userService.logout();
+                this.userInfo = null;
+                router.replaceUrl({ url: 'pages/Login' });
+              })
+          }
+        }
+        .width('90%')
+        .backgroundColor('#FFFFFF')
+        .borderRadius(10)
+        .padding(16)
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor('#F0F0F0')
+    .padding({ bottom: 56 })
   }
 }

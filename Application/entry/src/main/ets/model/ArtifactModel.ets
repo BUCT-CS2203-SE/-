@@ -30,12 +30,18 @@ export class Artifact {
   /**
    * 文物图片URL
    */
-  imageUrl: string;
+  imageUrl: string;  // 主图
   
   /**
-   * 文物类别ID
+   * 文物所有图片URL数组
    */
-  categoryId: number;
+  photos: string[];  // 所有图片URL数组
+  
+  /**
+   * 文物类型
+   * (0-青铜器 1-陶瓷器 2-玉器 3-书画 4-货币 5-石器 6-雕塑 7-其他)
+   */
+  type: number;
   
   /**
    * 文物详情URL
@@ -52,18 +58,29 @@ export class Artifact {
    */
   comments: number;
   
-  constructor(id: string, name: string, era: string, museum: string, 
-              description: string, imageUrl: string, categoryId: number, 
-              detailUrl: string, likes: number = 0, comments: number = 0) {
+  constructor(
+    id: string,
+    name: string,
+    era: string,
+    museum: string,
+    description: string,
+    imageUrl: string,
+    type: number,
+    detailUrl: string,
+    likes: number,
+    comments: number,
+    photos: string[] = []
+  ) {
     this.id = id;
     this.name = name;
     this.era = era;
     this.museum = museum;
     this.description = description;
     this.imageUrl = imageUrl;
-    this.categoryId = categoryId;
+    this.type = type;
     this.detailUrl = detailUrl;
     this.likes = likes;
     this.comments = comments;
+    this.photos = photos.length > 0 ? photos : [imageUrl]; // 如果没有额外图片，使用主图
   }
 } 

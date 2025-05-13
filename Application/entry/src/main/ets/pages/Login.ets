@@ -12,6 +12,14 @@ struct Login {
   
   private userService: UserService = new UserService();
   
+  aboutToAppear() {
+    // 获取路由参数
+    const params = router.getParams() as Record<string, string>;
+    if (params && params.phone) {
+      this.username = params.phone;
+    }
+  }
+  
   validateLogin(): boolean {
     if (!this.username.trim()) {
       this.errorMsg = '电话号不能为空';
@@ -30,17 +38,42 @@ struct Login {
       return;
     }
     
+    console.info('开始登录流程...');
     this.isLoading = true;
     this.userService.login(this.username, this.password)
       .then((user) => {
+        console.info(`登录成功，用户信息: ${JSON.stringify(user)}`);
         this.isLoading = false;
-        prompt.showToast({ message: '登录成功' });
-        router.back();
+        
+        try {
+          // 显示登录成功提示
+          console.info('显示登录成功提示...');
+          prompt.showToast({ 
+            message: '登录成功',
+            duration: 1500
+          });
+          
+          // 直接跳转到首页
+          console.info('准备跳转到首页...');
+          router.pushUrl({
+            url: 'pages/Index'
+          });
+        } catch (error) {
+          console.error('UI操作失败:', error);
+          // 如果UI操作失败，至少尝试导航
+          router.pushUrl({
+            url: 'pages/Index'
+          });
+        }
       })
-      .catch((err: Error) => {
+      .catch((error: Error) => {
+        console.error(`登录失败: ${error.message}`);
         this.isLoading = false;
-        this.errorMsg = `登录失败: ${err.message}`;
-        prompt.showToast({ message: this.errorMsg });
+        this.errorMsg = `登录失败: ${error.message}`;
+        prompt.showToast({ 
+          message: this.errorMsg,
+          duration: 2000
+        });
       });
   }
   

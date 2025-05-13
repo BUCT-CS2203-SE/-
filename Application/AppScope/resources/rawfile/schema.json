@@ -1,14 +1,38 @@
 {
-	"schemaVersion":29,
+	"schemaVersion":39,
 	"objectTypes":[
 		{
-			"objectTypeName":"test2",
+			"objectTypeName":"user_browse",
 			"fields":[
 				{
-					"fieldName":"tes1t",
-					"fieldType":"String",
+					"fieldName":"browse_id",
+					"fieldType":"Integer",
 					"belongPrimaryKey":true,
 					"notNull":true,
+					"isNeedEncrypt":false,
+					"isSensitive":false
+				},
+				{
+					"fieldName":"relic_id",
+					"fieldType":"Integer",
+					"belongPrimaryKey":false,
+					"notNull":false,
+					"isNeedEncrypt":false,
+					"isSensitive":false
+				},
+				{
+					"fieldName":"user_id",
+					"fieldType":"Integer",
+					"belongPrimaryKey":false,
+					"notNull":false,
+					"isNeedEncrypt":false,
+					"isSensitive":false
+				},
+				{
+					"fieldName":"browse_time",
+					"fieldType":"Date",
+					"belongPrimaryKey":false,
+					"notNull":false,
 					"isNeedEncrypt":false,
 					"isSensitive":false
 				}
@@ -18,10 +42,10 @@
 			]
 		},
 		{
-			"objectTypeName":"test",
+			"objectTypeName":"user_fav_relic",
 			"fields":[
 				{
-					"fieldName":"field1",
+					"fieldName":"fav_id",
 					"fieldType":"Integer",
 					"belongPrimaryKey":true,
 					"notNull":true,
@@ -29,7 +53,7 @@
 					"isSensitive":false
 				},
 				{
-					"fieldName":"field2",
+					"fieldName":"relic_id",
 					"fieldType":"Integer",
 					"belongPrimaryKey":false,
 					"notNull":true,
@@ -38,80 +62,41 @@
 					"defaultValue":"0"
 				},
 				{
-					"fieldName":"field3",
-					"fieldType":"String",
+					"fieldName":"user_id",
+					"fieldType":"Integer",
 					"belongPrimaryKey":false,
-					"notNull":false,
+					"notNull":true,
 					"isNeedEncrypt":false,
-					"isSensitive":false
-				},
-				{
-					"fieldName":"field4",
-					"fieldType":"Text",
-					"belongPrimaryKey":false,
-					"notNull":false,
-					"isNeedEncrypt":false,
-					"isSensitive":false
-				},
-				{
-					"fieldName":"field5",
-					"fieldType":"Boolean",
-					"belongPrimaryKey":false,
-					"notNull":false,
-					"isNeedEncrypt":false,
-					"isSensitive":false
-				},
-				{
-					"fieldName":"field6",
-					"fieldType":"Float",
-					"belongPrimaryKey":false,
-					"notNull":false,
-					"isNeedEncrypt":false,
-					"isSensitive":false
-				},
-				{
-					"fieldName":"field7",
-					"fieldType":"ByteArray",
-					"belongPrimaryKey":false,
-					"notNull":false,
-					"isNeedEncrypt":false,
-					"isSensitive":false
-				},
-				{
-					"fieldName":"field8",
-					"fieldType":"Date",
-					"belongPrimaryKey":false,
-					"notNull":false,
-					"isNeedEncrypt":false,
-					"isSensitive":false
+					"isSensitive":false,
+					"defaultValue":"0"
 				}
 			],
 			"indexes":[
 				{
-					"indexName":"field1Index",
+					"indexName":"fk_fav_user",
 					"indexList":[
 						{
-							"fieldName":"field1",
+							"fieldName":"user_id",
 							"sortType":"ASC"
 						}
 					]
 				},
 				{
-					"indexName":"field2Index",
+					"indexName":"fk_fav_relic",
 					"indexList":[
 						{
-							"fieldName":"field2",
-							"sortType":"DESC"
+							"fieldName":"relic_id",
+							"sortType":"ASC"
 						}
 					]
 				}
 			]
 		},
 		{
-			"objectTypeName":"ttttt",
+			"objectTypeName":"user_info",
 			"fields":[
 				{
-					"fieldName":"field1",
+					"fieldName":"user_id",
 					"fieldType":"Integer",
 					"belongPrimaryKey":true,
 					"notNull":true,
@@ -119,57 +104,62 @@
 					"isSensitive":false
 				},
 				{
-					"fieldName":"field2",
-					"fieldType":"Integer",
+					"fieldName":"nickname",
+					"fieldType":"String",
 					"belongPrimaryKey":false,
 					"notNull":true,
+					"isNeedEncrypt":false,
+					"isSensitive":false,
+					"defaultValue":"用户"
+				},
+				{
+					"fieldName":"gender",
+					"fieldType":"Integer",
+					"belongPrimaryKey":false,
+					"notNull":false,
 					"isNeedEncrypt":false,
 					"isSensitive":false,
 					"defaultValue":"0"
 				},
 				{
-					"fieldName":"field3",
+					"fieldName":"phone",
+					"fieldType":"String",
+					"belongPrimaryKey":false,
+					"notNull":true,
+					"isNeedEncrypt":false,
+					"isSensitive":false,
+					"defaultValue":""
+				},
+				{
+					"fieldName":"password",
+					"fieldType":"String",
+					"belongPrimaryKey":false,
+					"notNull":true,
+					"isNeedEncrypt":false,
+					"isSensitive":false,
+					"defaultValue":""
+				},
+				{
+					"fieldName":"email",
+					"fieldType":"String",
+					"belongPrimaryKey":false,
+					"notNull":true,
+					"isNeedEncrypt":false,
+					"isSensitive":false,
+					"defaultValue":""
+				},
+				{
+					"fieldName":"img_url",
 					"fieldType":"String",
 					"belongPrimaryKey":false,
 					"notNull":false,
 					"isNeedEncrypt":false,
-					"isSensitive":false
+					"isSensitive":false,
+					"defaultValue":"https://tse1-mm.cn.bing.net/th/id/OIP-C.3dLZ4NXxxg03pzV30ITasAAAAA?rs=1&pid=ImgDetMain"
 				},
 				{
-					"fieldName":"field4",
-					"fieldType":"Text",
-					"belongPrimaryKey":false,
-					"notNull":false,
-					"isNeedEncrypt":false,
-					"isSensitive":false
-				},
-				{
-					"fieldName":"field5",
-					"fieldType":"Boolean",
-					"belongPrimaryKey":false,
-					"notNull":false,
-					"isNeedEncrypt":false,
-					"isSensitive":false
-				},
-				{
-					"fieldName":"kkkkkkk",
-					"fieldType":"Float",
-					"belongPrimaryKey":false,
-					"notNull":false,
-					"isNeedEncrypt":false,
-					"isSensitive":false
-				},
-				{
-					"fieldName":"field7",
-					"fieldType":"ByteArray",
-					"belongPrimaryKey":false,
-					"notNull":false,
-					"isNeedEncrypt":false,
-					"isSensitive":false
-				},
-				{
-					"fieldName":"field8",
-					"fieldType":"Date",
+					"fieldName":"spare",
+					"fieldType":"String",
 					"belongPrimaryKey":false,
 					"notNull":false,
 					"isNeedEncrypt":false,
@@ -178,30 +168,21 @@
 			],
 			"indexes":[
 				{
-					"indexName":"field1Index",
+					"indexName":"idx_phone",
 					"indexList":[
 						{
-							"fieldName":"field1",
+							"fieldName":"phone",
 							"sortType":"ASC"
-						}
-					]
-				},
-				{
-					"indexName":"field2Index",
-					"indexList":[
-						{
-							"fieldName":"field2",
-							"sortType":"DESC"
 						}
 					]
 				}
 			]
 		},
 		{
-			"objectTypeName":"test1",
+			"objectTypeName":"relic_info",
 			"fields":[
 				{
-					"fieldName":"field1",
+					"fieldName":"relic_id",
 					"fieldType":"Integer",
 					"belongPrimaryKey":true,
 					"notNull":true,
@@ -209,7 +190,76 @@
 					"isSensitive":false
 				},
 				{
-					"fieldName":"field2",
+					"fieldName":"relic_name",
+					"fieldType":"String",
+					"belongPrimaryKey":false,
+					"notNull":true,
+					"isNeedEncrypt":false,
+					"isSensitive":false,
+					"defaultValue":""
+				},
+				{
+					"fieldName":"relic_type",
+					"fieldType":"Integer",
+					"belongPrimaryKey":false,
+					"notNull":true,
+					"isNeedEncrypt":false,
+					"isSensitive":false,
+					"defaultValue":"7"
+				},
+				{
+					"fieldName":"relic_time",
+					"fieldType":"String",
+					"belongPrimaryKey":false,
+					"notNull":false,
+					"isNeedEncrypt":false,
+					"isSensitive":false
+				},
+				{
+					"fieldName":"relic_loc",
+					"fieldType":"String",
+					"belongPrimaryKey":false,
+					"notNull":true,
+					"isNeedEncrypt":false,
+					"isSensitive":false,
+					"defaultValue":""
+				},
+				{
+					"fieldName":"relic_intro",
+					"fieldType":"Text",
+					"belongPrimaryKey":false,
+					"notNull":true,
+					"isNeedEncrypt":false,
+					"isSensitive":false,
+					"defaultValue":""
+				},
+				{
+					"fieldName":"spare_id",
+					"fieldType":"Integer",
+					"belongPrimaryKey":false,
+					"notNull":true,
+					"isNeedEncrypt":false,
+					"isSensitive":false,
+					"defaultValue":"0"
+				}
+			],
+			"indexes":[
+				
+			]
+		},
+		{
+			"objectTypeName":"user_comment_relic",
+			"fields":[
+				{
+					"fieldName":"relic_comment_id",
+					"fieldType":"Integer",
+					"belongPrimaryKey":true,
+					"notNull":true,
+					"isNeedEncrypt":false,
+					"isSensitive":false
+				},
+				{
+					"fieldName":"relic_id",
 					"fieldType":"Integer",
 					"belongPrimaryKey":false,
 					"notNull":true,
@@ -218,70 +268,82 @@
 					"defaultValue":"0"
 				},
 				{
-					"fieldName":"field3",
-					"fieldType":"String",
+					"fieldName":"user_id",
+					"fieldType":"Integer",
 					"belongPrimaryKey":false,
-					"notNull":false,
+					"notNull":true,
 					"isNeedEncrypt":false,
-					"isSensitive":false
+					"isSensitive":false,
+					"defaultValue":"0"
 				},
 				{
-					"fieldName":"field4",
+					"fieldName":"comment",
 					"fieldType":"Text",
 					"belongPrimaryKey":false,
-					"notNull":false,
+					"notNull":true,
 					"isNeedEncrypt":false,
-					"isSensitive":false
-				},
-				{
-					"fieldName":"field5",
-					"fieldType":"Boolean",
-					"belongPrimaryKey":false,
-					"notNull":false,
-					"isNeedEncrypt":false,
-					"isSensitive":false
-				},
-				{
-					"fieldName":"field6",
-					"fieldType":"Float",
-					"belongPrimaryKey":false,
-					"notNull":false,
-					"isNeedEncrypt":false,
-					"isSensitive":false
-				},
-				{
-					"fieldName":"field7",
-					"fieldType":"ByteArray",
-					"belongPrimaryKey":false,
-					"notNull":false,
-					"isNeedEncrypt":false,
-					"isSensitive":false
-				},
-				{
-					"fieldName":"field8",
-					"fieldType":"Date",
-					"belongPrimaryKey":false,
-					"notNull":false,
-					"isNeedEncrypt":false,
-					"isSensitive":false
+					"isSensitive":false,
+					"defaultValue":""
 				}
 			],
 			"indexes":[
 				{
-					"indexName":"field1Index",
+					"indexName":"fk_comment_relic",
 					"indexList":[
 						{
-							"fieldName":"field1",
+							"fieldName":"relic_id",
 							"sortType":"ASC"
 						}
 					]
 				},
 				{
-					"indexName":"field2Index",
+					"indexName":"fk_comment_user_id",
 					"indexList":[
 						{
-							"fieldName":"field2",
-							"sortType":"DESC"
+							"fieldName":"user_id",
+							"sortType":"ASC"
+						}
+					]
+				}
+			]
+		},
+		{
+			"objectTypeName":"relic_photo",
+			"fields":[
+				{
+					"fieldName":"photo_id",
+					"fieldType":"Integer",
+					"belongPrimaryKey":true,
+					"notNull":true,
+					"isNeedEncrypt":false,
+					"isSensitive":false
+				},
+				{
+					"fieldName":"relic_id",
+					"fieldType":"Integer",
+					"belongPrimaryKey":false,
+					"notNull":true,
+					"isNeedEncrypt":false,
+					"isSensitive":false,
+					"defaultValue":"0"
+				},
+				{
+					"fieldName":"photo_url",
+					"fieldType":"String",
+					"belongPrimaryKey":false,
+					"notNull":true,
+					"isNeedEncrypt":false,
+					"isSensitive":false,
+					"defaultValue":""
+				}
+			],
+			"indexes":[
+				{
+					"indexName":"fk_photo_relic",
+					"indexList":[
+						{
+							"fieldName":"relic_id",
+							"sortType":"ASC"
 						}
 					]
 				}
@@ -290,40 +352,7 @@
 	],
 	"permissions":[
 		{
-			"objectTypeName":"test2",
-			"permissions":[
-				{
-					"role":"World",
-					"rights":[
-						"Read"
-					]
-				},
-				{
-					"role":"Authenticated",
-					"rights":[
-						"Read"
-					]
-				},
-				{
-					"role":"Creator",
-					"rights":[
-						"Read",
-						"Upsert",
-						"Delete"
-					]
-				},
-				{
-					"role":"Administrator",
-					"rights":[
-						"Read",
-						"Upsert",
-						"Delete"
-					]
-				}
-			]
-		},
-		{
-			"objectTypeName":"test",
+			"objectTypeName":"relic_info",
 			"permissions":[
 				{
 					"role":"World",
@@ -357,7 +386,7 @@
 			]
 		},
 		{
-			"objectTypeName":"ttttt",
+			"objectTypeName":"relic_photo",
 			"permissions":[
 				{
 					"role":"World",
@@ -391,7 +420,108 @@
 			]
 		},
 		{
-			"objectTypeName":"test1",
+			"objectTypeName":"user_browse",
+			"permissions":[
+				{
+					"role":"World",
+					"rights":[
+						"Read"
+					]
+				},
+				{
+					"role":"Authenticated",
+					"rights":[
+						"Read"
+					]
+				},
+				{
+					"role":"Creator",
+					"rights":[
+						"Read",
+						"Upsert",
+						"Delete"
+					]
+				},
+				{
+					"role":"Administrator",
+					"rights":[
+						"Read",
+						"Upsert",
+						"Delete"
+					]
+				}
+			]
+		},
+		{
+			"objectTypeName":"user_fav_relic",
+			"permissions":[
+				{
+					"role":"World",
+					"rights":[
+						"Read"
+					]
+				},
+				{
+					"role":"Authenticated",
+					"rights":[
+						"Read",
+						"Upsert"
+					]
+				},
+				{
+					"role":"Creator",
+					"rights":[
+						"Read",
+						"Upsert",
+						"Delete"
+					]
+				},
+				{
+					"role":"Administrator",
+					"rights":[
+						"Read",
+						"Upsert",
+						"Delete"
+					]
+				}
+			]
+		},
+		{
+			"objectTypeName":"user_info",
+			"permissions":[
+				{
+					"role":"World",
+					"rights":[
+						"Read"
+					]
+				},
+				{
+					"role":"Authenticated",
+					"rights":[
+						"Read",
+						"Upsert"
+					]
+				},
+				{
+					"role":"Creator",
+					"rights":[
+						"Read",
+						"Upsert",
+						"Delete"
+					]
+				},
+				{
+					"role":"Administrator",
+					"rights":[
+						"Read",
+						"Upsert",
+						"Delete"
+					]
+				}
+			]
+		},
+		{
+			"objectTypeName":"user_comment_relic",
 			"permissions":[
 				{
 					"role":"World",

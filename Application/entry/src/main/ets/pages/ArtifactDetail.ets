@@ -1,5 +1,5 @@
 import { Artifact } from '../model/ArtifactModel';
-import { UserComment } from '../model/UserModel';
+import { UserRelicComment } from '../model/UserModel';
 import { ArtifactService } from '../services/ArtifactService';
 import { UserService } from '../services/UserService';
 import { Constants, CategoryItem } from '../common/constants/Constants';
@@ -11,21 +11,42 @@ interface RouterParams {
 }
 
 /**
- * 错误接口
+ * 错误处理工具类
  */
-interface ErrorWithMessage {
+class ErrorHandler {
+  /**
+   * 处理错误并返回错误消息
+   */
+  static handleError(error: Error): string {
+    return error.message;
+  }
+}
+
+/**
+ * 自定义错误类型
+ */
+class AppError {
   message: string;
+  
+  constructor(message: string) {
+    this.message = message;
+  }
+  
+  toString(): string {
+    return this.message;
+  }
 }
 
 @Entry
 @Component
 struct ArtifactDetail {
-  @State artifact: Artifact = new Artifact('', '', '', '', '', '', 1, '', 0, 0);
-  @State comments: UserComment[] = [];
+  @State artifact: Artifact = new Artifact('', '', '', '', '', '', 0, '', 0, 0);
+  @State comments: UserRelicComment[] = [];
   @State isLoading: boolean = true;
   @State errorMsg: string = '';
   @State commentText: string = '';
   @State isLiked: boolean = false;
+  @State currentImageIndex: number = 0;
   
   private artifactId: string = '';
   private artifactService: ArtifactService = new ArtifactService();
@@ -43,17 +64,28 @@ struct ArtifactDetail {
     }
   }
   
-  loadArtifactDetail() {
+  async loadArtifactDetail() {
+    try {
     this.isLoading = true;
-    this.artifactService.getArtifactDetail(this.artifactId)
-      .then((artifact) => {
-        this.artifact = artifact;
+    this.errorMsg = '';
+    console.info(`开始加载文物详情，ID: ${this.artifactId}`);
+    
+      this.artifact = await this.artifactService.getArtifactDetail(this.artifactId);
+      this.comments = await this.artifactService.getArtifactComments(this.artifactId);
+      
+      console.info(`文物详情加载成功: ${JSON.stringify(this.artifact)}`);
+        
+        // 判断是否为默认数据
+      if (this.artifactId !== this.artifact.id) {
+        console.warn(`加载了默认数据，请求ID: ${this.artifactId}, 返回ID: ${this.artifact.id}`);
+          this.errorMsg = '无法从数据库获取文物详情，显示的是默认数据。请检查后端服务是否正常运行，并确保能连接到云数据库。';
+        }
+    } catch (error) {
+      console.error(`加载文物详情失败: ${error.message}`);
+      this.errorMsg = `加载文物详情失败: ${error.message}。请确保后端服务运行在localhost:3000并能连接到云数据库。`;
+    } finally {
         this.isLoading = false;
-      })
-      .catch((err: ErrorWithMessage) => {
-        this.errorMsg = `加载文物详情失败: ${err.message}`;
-        this.isLoading = false;
-      });
+    }
   }
   
   loadComments() {
@@ -61,8 +93,8 @@ struct ArtifactDetail {
       .then((comments) => {
         this.comments = comments;
       })
-      .catch((err: ErrorWithMessage) => {
-        console.error(`加载评论失败: ${err.message}`);
+      .catch((error: Error) => {
+        console.error(`加载评论失败: ${error.message}`);
       });
   }
   
@@ -72,16 +104,50 @@ struct ArtifactDetail {
       return;
     }
     
-    this.userService.addComment(this.artifactId, this.commentText)
-      .then((success) => {
-        if (success) {
+    // 保存当前评论内容用于发送
+    const currentComment = this.commentText;
+    // 立即清空输入框
+    this.commentText = '';
+    
+    this.userService.addComment(this.artifactId, currentComment)
+      .then((comment) => {
+        if (comment) {
           ToastUtil.show('评论成功');
-          this.commentText = '';
-          this.loadComments();
+        } else {
+          ToastUtil.show('评论失败，请重试');
         }
+        // 重新获取文物详情
+        this.artifactService.getArtifactDetail(this.artifactId)
+          .then((artifact) => {
+            this.artifact = artifact;
+            // 重新获取评论列表
+            return this.artifactService.getArtifactComments(this.artifactId);
+          })
+          .then((comments) => {
+            this.comments = comments;
+          })
+          .catch((error: Error) => {
+            console.error('刷新文物详情失败:', error.message);
+            ToastUtil.show(`刷新失败: ${error.message}`);
+          });
       })
-      .catch((err: ErrorWithMessage) => {
-        ToastUtil.show(`评论失败: ${err.message}`);
+      .catch((error: Error) => {
+        console.error('添加评论失败:', error.message);
+        ToastUtil.show(`评论失败: ${error.message}`);
+        // 即使评论失败，也重新获取文物详情
+        this.artifactService.getArtifactDetail(this.artifactId)
+          .then((artifact) => {
+            this.artifact = artifact;
+            // 重新获取评论列表
+            return this.artifactService.getArtifactComments(this.artifactId);
+          })
+          .then((comments) => {
+            this.comments = comments;
+          })
+          .catch((error: Error) => {
+            console.error('刷新文物详情失败:', error.message);
+            ToastUtil.show(`刷新失败: ${error.message}`);
+          });
       });
   }
   
@@ -149,22 +215,34 @@ struct ArtifactDetail {
         // 文物详情
         Scroll() {
           Column() {
-            // 文物图片
+            // 如果有错误信息但仍显示文物，显示错误提示
+            if (this.errorMsg) {
+              Text(this.errorMsg)
+                .fontSize(14)
+                .fontColor('#FF0000')
+                .backgroundColor('#FFEEEE')
+                .width('100%')
+                .textAlign(TextAlign.Center)
+                .padding(8)
+                .margin({ bottom: 10 })
+            }
+            
+            // 文物图片轮播
             Stack() {
-              Image(this.artifact.imageUrl || $r('app.media.placeholder'))
+              Swiper() {
+                ForEach(this.artifact.photos, (photoUrl: string) => {
+                  Image(photoUrl)
                 .width('100%')
                 .height(300)
                 .objectFit(ImageFit.Cover)
-              
-              Row() {
-                Text(`${this.artifact.museum}`)
-                  .fontSize(12)
-                  .fontColor('#FFFFFF')
-                  .backgroundColor('#00000080')
-                  .borderRadius(12)
-                  .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+                })
               }
-              .position({ x: 10, y: 10 })
+              .width('100%')
+              .height(300)
+              .indicator(true)
+              .loop(true)
+              .autoPlay(true)
+              .interval(3000)
             }
             .width('100%')
             .height(300)
@@ -198,7 +276,7 @@ struct ArtifactDetail {
                 .fontColor('#666666')
                 .margin({ top: 8 })
               
-              Text(`分类: ${Constants.ARTIFACT_CATEGORIES.find((c: CategoryItem) => c.id === this.artifact.categoryId)?.name || '未知'}`)
+              Text(`分类: ${Constants.ARTIFACT_CATEGORIES.find((c: CategoryItem) => c.id === this.artifact.type)?.name || '未知'}`)
                 .fontSize(16)
                 .fontColor('#666666')
                 .margin({ top: 8 })
@@ -233,21 +311,21 @@ struct ArtifactDetail {
               
               // 评论列表
               if (this.comments.length > 0) {
-                ForEach(this.comments, (comment: UserComment) => {
+                ForEach(this.comments, (comment: UserRelicComment) => {
                   Column() {
                     Row() {
-                      Image(comment.avatarUrl || $r('app.media.avatar_default'))
+                      Image($r('app.media.avatar_default'))
                         .width(24)
                         .height(24)
                         .borderRadius(12)
                         .margin({ right: 8 })
                       
                       Column() {
-                        Text(comment.username)
+                        Text(String(comment.user_id))
                           .fontSize(14)
                           .fontWeight(FontWeight.Medium)
                         
-                        Text(comment.createTime)
+                        Text(new Date(comment.comment_time).toLocaleString())
                           .fontSize(12)
                           .fontColor('#999999')
                           .margin({ top: 4 })
@@ -258,7 +336,7 @@ struct ArtifactDetail {
                     }
                     .width('100%')
                     
-                    Text(comment.content)
+                    Text(comment.comment)
                       .fontSize(16)
                       .margin({ top: 8, left: 50 })
                       .width('100%')
@@ -291,13 +369,16 @@ struct ArtifactDetail {
       // 底部操作栏
       Row() {
         // 评论输入
-        TextInput({ placeholder: '写评论...', text: this.commentText })
+        TextInput({ 
+          placeholder: '写评论...', 
+          text: this.commentText 
+        })
           .width('70%')
           .height(40)
           .backgroundColor('#F5F5F5')
           .borderRadius(20)
           .padding({ left: 15, right: 15 })
-          .onChange((value) => {
+          .onChange((value: string) => {
             this.commentText = value;
           })
         
