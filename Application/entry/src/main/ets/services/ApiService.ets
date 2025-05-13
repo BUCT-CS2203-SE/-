@@ -338,6 +338,10 @@ export class ApiService {
   private readonly BASE_URL: string = 'http://localhost:3000/api';
   private readonly TIMEOUT: number = 10000;
   
+  constructor() {
+    console.info(`API服务初始化，BASE_URL: ${this.BASE_URL}`);
+  }
+  
   /**
    * 发送HTTP请求
    */
