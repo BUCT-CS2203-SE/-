@@ -332,6 +332,46 @@ interface RelicCommentResponse {
 }
 
 /**
+ * 收藏文物数据接口
+ */
+interface FavoriteRelicData {
+  relic_id: number;
+  name: string;
+  type: number;
+  era: string;
+  museum: string;
+  description: string;
+  spare_id: number;
+  photos: Array<FavoritePhoto>;
+}
+
+/**
+ * 收藏文物图片接口
+ */
+interface FavoritePhoto {
+  photo_id: number;
+  relic_id: number;
+  photo_url: string;
+}
+
+/**
+ * 收藏响应数据接口
+ */
+interface FavoriteResponse {
+  fav_id: number;
+  user_id: number;
+  relic_id: number;
+  relic: FavoriteRelicData;
+}
+
+/**
+ * 收藏状态响应接口
+ */
+interface IsFavoriteResponse {
+  isFavorite: boolean;
+}
+
+/**
  * API服务类
  */
 export class ApiService {
@@ -691,10 +731,13 @@ export class ApiService {
       favoriteData.setArtifactId(artifactId);
       
       await this.sendRequest<GenericResponse>(
-        `/users/${userId}/favorites`,
+        `${this.BASE_URL}/relic-favorites`,
         this.createRequestOptions(
           http.RequestMethod.POST,
-          JSON.stringify(favoriteData.toRecord())
+          JSON.stringify({
+            user_id: userId,
+            relic_id: artifactId
+          })
         )
       );
     } catch (error) {
@@ -711,7 +754,7 @@ export class ApiService {
   async removeFavorite(userId: string, artifactId: string): Promise<void> {
     try {
       await this.sendRequest<GenericResponse>(
-        `/users/${userId}/favorites/${artifactId}`,
+        `${this.BASE_URL}/relic-favorites/${userId}/${artifactId}`,
         this.createRequestOptions(http.RequestMethod.DELETE)
       );
     } catch (error) {
@@ -726,28 +769,32 @@ export class ApiService {
    */
   async getUserFavorites(userId: string): Promise<Artifact[]> {
     try {
-      const items = await this.sendRequest<Array<ArtifactData>>(
-        `/users/${userId}/favorites`,
+      const response = await this.sendRequest<Array<FavoriteResponse>>(
+        `${this.BASE_URL}/relic-favorites/user/${userId}`,
         this.createRequestOptions(http.RequestMethod.GET)
       );
       
       // 将API返回的数据转换为Artifact对象数组
-      return items.map(item => new Artifact(
-        item.relic_id.toString(),
-        item.name,
-        item.era,
-        item.museum,
-        item.description,
-        item.photos?.[0]?.photo_url || '', // 使用第一张图片作为主图
-        item.type,
+      return response.map(item => {
+        const relic = item.relic;
+        const imageUrl = relic.photos && relic.photos.length > 0 ? relic.photos[0].photo_url : '';
+        return new Artifact(
+          relic.relic_id.toString(),
+          relic.name,
+          relic.era,
+          relic.museum,
+          relic.description,
+          imageUrl, // 使用photos数组中的第一张图片URL
+          relic.type,
         '', // detailUrl
-        0,  // likes
-        0,  // comments
-        item.photos?.map(photo => photo.photo_url) || [] // 所有图片URL
-      ));
+          0, // likes
+          0, // comments
+          relic.photos?.map(photo => photo.photo_url) || [] // 所有图片URL
+        );
+      });
     } catch (error) {
-      console.error(`获取用户收藏失败: ${userId}`, error);
-      throw new ApiError(error instanceof Error ? error.message : String(error));
+      console.error('获取用户收藏失败:', error);
+      throw new ApiError('获取用户收藏失败', error.statusCode || 500);
     }
   }
 
@@ -764,6 +811,22 @@ export class ApiService {
       return response.message === '评论删除成功！';
     } catch (error) {
       console.error(`删除评论失败: ${error}`);
+      return false;
+    }
+  }
+
+  /**
+   * 判断用户是否收藏了某个文物
+   */
+  async isFavorite(userId: string, artifactId: string): Promise<boolean> {
+    try {
+      const response = await this.sendRequest<IsFavoriteResponse>(
+        `${this.BASE_URL}/relic-favorites/user/${userId}/${artifactId}`,
+        this.createRequestOptions(http.RequestMethod.GET)
+      );
+      return response.isFavorite;
+    } catch (error) {
+      console.error('查询收藏状态失败:', error);
       return false;
     }
   }

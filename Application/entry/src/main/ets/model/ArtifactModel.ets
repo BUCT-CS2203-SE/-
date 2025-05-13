@@ -84,3 +84,14 @@ export class Artifact {
     this.photos = photos.length > 0 ? photos : [imageUrl]; // 如果没有额外图片，使用主图
   }
 } 
+
+/**
+ * 收藏项数据结构
+ */
+export interface FavoriteItem {
+  id: number;
+  name: string;
+  era: string;
+  museum: string;
+  imageUrl: string;
+} 
