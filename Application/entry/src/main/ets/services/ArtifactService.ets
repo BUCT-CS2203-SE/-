@@ -1,7 +1,7 @@
 import { Artifact } from '../model/ArtifactModel';
 import { Constants } from '../common/constants/Constants';
 import { ApiService } from './ApiService';
-import { CommentData, UserComment } from '../model/UserModel';
+import { UserRelicComment } from '../model/UserModel';
 
 /**
  * 文物服务错误类
@@ -17,7 +17,7 @@ class ArtifactServiceError extends Error {
  */
 export class ArtifactService {
   private apiService: ApiService = new ApiService();
-
+  
   // 模拟数据，作为API调用失败时的兜底
   private mockArtifacts: Artifact[] = [
     new Artifact(
@@ -96,14 +96,14 @@ export class ArtifactService {
   async getArtifactList(type?: number, page: number = 1, pageSize: number = 10): Promise<Artifact[]> {
     try {
       console.info(`开始获取文物列表，类型: ${type}, 页码: ${page}, 每页数量: ${pageSize}`);
-
+      
       // 调用API服务获取文物列表
       const artifacts = await this.apiService.getArtifactList(type, page, pageSize);
       console.info(`成功获取文物列表，数量: ${artifacts.length}`);
       return artifacts;
     } catch (err) {
       console.error('获取文物列表失败:', err instanceof Error ? err.message : String(err));
-
+      
       // 返回模拟数据作为兜底方案
       console.info('使用模拟数据（文物列表）');
       let filteredArtifacts = this.mockArtifacts;
@@ -122,14 +122,14 @@ export class ArtifactService {
   async getArtifactDetail(id: string): Promise<Artifact> {
     try {
       console.info(`开始获取文物详情，ID: ${id}`);
-
+      
       // 调用API服务获取文物详情
       const artifact = await this.apiService.getArtifactDetail(id);
       console.info(`成功获取文物详情: ${artifact.name}`);
       return artifact;
     } catch (err) {
-      console.error('获取文物详情失败:', JSON.stringify(err));
-
+      console.error('获取文物详情失败:', err instanceof Error ? err.message : String(err));
+      
       // 返回模拟数据作为兜底方案
       console.info('使用模拟数据（文物详情）');
       const mockArtifact = this.mockArtifacts.find(item => item.id === id);
@@ -147,21 +147,21 @@ export class ArtifactService {
   async searchByKeyword(keyword: string): Promise<Artifact[]> {
     try {
       console.info(`开始搜索文物，关键词: ${keyword}`);
-
+      
       // 调用API服务搜索文物
       const artifacts = await this.apiService.searchArtifacts(keyword);
       console.info(`成功搜索文物，数量: ${artifacts.length}`);
       return artifacts;
     } catch (err) {
       console.error('搜索文物失败:', err instanceof Error ? err.message : String(err));
-
+      
       // 返回模拟数据作为兜底方案
       console.info('使用模拟数据（文物搜索）');
-      return this.mockArtifacts.filter(item =>
-      item.name.includes(keyword) ||
-      item.description.includes(keyword) ||
-      item.museum.includes(keyword) ||
-      item.era.includes(keyword)
+      return this.mockArtifacts.filter(item => 
+        item.name.includes(keyword) || 
+        item.description.includes(keyword) || 
+        item.museum.includes(keyword) || 
+        item.era.includes(keyword)
       );
     }
   }
@@ -178,29 +178,27 @@ export class ArtifactService {
   /**
    * 获取文物评论
    */
-  async getArtifactComments(artifactId: string): Promise<CommentData[]> {
+  async getArtifactComments(artifactId: string): Promise<UserRelicComment[]> {
     try {
       console.info(`开始获取文物评论，ID: ${artifactId}`);
-
+      
       // 调用API服务获取文物评论
       const comments = await this.apiService.getArtifactComments(artifactId);
       console.info(`成功获取文物评论，数量: ${comments.length}`);
       return comments;
     } catch (err) {
       console.error('获取文物评论失败:', err instanceof Error ? err.message : String(err));
-
+      
       // 返回模拟数据作为兜底方案
       const currentDate = new Date();
-      const mockComment = new UserComment(
+      const mockComment = new UserRelicComment(
         '1',
+        artifactId,
         'user1',
-        '文物爱好者',
-        'https://example.com/avatar1.jpg',
         '这件文物保存非常完好，令人惊叹！',
-        currentDate.toISOString(),
-        artifactId
+        currentDate.toISOString()
       );
-
+      
       return [mockComment];
     }
   }

@@ -2,38 +2,44 @@
  * 用户控制器
  */
 const db = require("../models");
-const User = db.users;
-const Comment = db.comments;
-const Favorite = db.favorites;
-const Artifact = db.artifacts;
+const User = db.User;
+const RelicComment = db.RelicComment;
+const RelicFavorite = db.RelicFavorite;
+const Artifact = db.Artifact;
 const { Op } = db.Sequelize;
+const bcrypt = require('bcrypt');
 
 // 用户注册
 exports.register = async (req, res) => {
     try {
         // 验证请求
-        if (!req.body.username || !req.body.password) {
+        if (!req.body.phone || !req.body.password) {
             return res.status(400).send({
-                message: "用户名和密码不能为空！"
+                message: "手机号和密码不能为空！"
             });
         }
 
-        // 检查用户名是否已存在
-        const existingUser = await User.findOne({ where: { username: req.body.username } });
+        // 检查手机号是否已存在
+        const existingUser = await User.findOne({ where: { phone: req.body.phone } });
         if (existingUser) {
             return res.status(400).send({
-                message: "用户名已存在！"
+                message: "手机号已存在！"
             });
         }
+
+        // 哈希处理密码
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(req.body.password, salt);
 
         // 创建用户对象
         const user = {
-            id: Date.now().toString(),
-            username: req.body.username,
-            password: req.body.password, // 实际应用中应该哈希处理密码
+            nickname: req.body.nickname || '用户',
+            gender: req.body.gender || 0,
+            phone: req.body.phone,
+            password: hashedPassword, // 使用哈希后的密码
             email: req.body.email || "",
-            avatarUrl: req.body.avatarUrl || "",
-            isVerified: false
+            img_url: req.body.img_url || "https://tse1-mm.cn.bing.net/th/id/OIP-C.3dLZ4NXxxg03pzV30ITasAAAAA?rs=1&pid=ImgDetMain",
+            spare: req.body.spare || null
         };
 
         // 保存到数据库
@@ -53,23 +59,24 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
     try {
         // 验证请求
-        if (!req.body.username || !req.body.password) {
+        if (!req.body.phone || !req.body.password) {
             return res.status(400).send({
-                message: "用户名和密码不能为空！"
+                message: "手机号和密码不能为空！"
             });
         }
 
         // 查找用户
-        const user = await User.findOne({ where: { username: req.body.username } });
+        const user = await User.findOne({ where: { phone: req.body.phone } });
 
         if (!user) {
             return res.status(404).send({
-                message: "用户不存在！"
+                message: `手机号 ${req.body.phone} 未注册！`
             });
         }
 
         // 验证密码
-        if (user.password !== req.body.password) { // 实际应用中应该比较哈希值
+        const isPasswordValid = await bcrypt.compare(req.body.password, user.password);
+        if (!isPasswordValid) {
             return res.status(401).send({
                 message: "密码错误！"
             });
@@ -77,8 +84,12 @@ exports.login = async (req, res) => {
 
         // 返回用户信息（不包含密码）
         const { password, ...userWithoutPassword } = user.toJSON();
-        res.send(userWithoutPassword);
+        res.send({
+            message: "登录成功！",
+            user: userWithoutPassword
+        });
     } catch (err) {
+        console.error("登录错误:", err);
         res.status(500).send({
             message: err.message || "用户登录时发生错误。"
         });
@@ -165,18 +176,14 @@ exports.addComment = async (req, res) => {
 
         // 创建评论对象
         const comment = {
-            id: Date.now().toString(),
-            artifactId: parseInt(req.body.artifactId),
-            userId: req.body.userId,
-            username: user.username,
-            avatarUrl: user.avatarUrl || "",
-            content: req.body.content,
-            createTime: now.toISOString(),
-            createTimestamp: now
+            relic_id: parseInt(req.body.artifactId),
+            user_id: req.body.userId,
+            comment: req.body.content,
+            comment_time: now
         };
 
         // 保存到数据库
-        const data = await Comment.create(comment);
+        const data = await RelicComment.create(comment);
 
         res.send(data);
     } catch (err) {
@@ -192,21 +199,28 @@ exports.getComments = async (req, res) => {
         const userId = req.params.id;
 
         // 通过关联查询方式获取评论
-        const user = await User.findByPk(userId, {
-            include: [{
-                model: Comment,
-                as: 'userComments',
-                order: [['createTimestamp', 'DESC']]
-            }]
+        const comments = await RelicComment.findAll({
+            where: { user_id: userId },
+            include: [
+                {
+                    model: Artifact,
+                    as: 'relic'
+                },
+                {
+                    model: User,
+                    as: 'user'
+                }
+            ],
+            order: [['comment_time', 'DESC']]
         });
 
-        if (!user) {
+        if (!comments) {
             return res.status(404).send({
-                message: `未找到ID为 ${userId} 的用户。`
+                message: `未找到ID为 ${userId} 的用户评论。`
             });
         }
 
-        res.send(user.userComments || []);
+        res.send(comments);
     } catch (err) {
         res.status(500).send({
             message: err.message || `获取用户ID为 ${req.params.id} 的评论时发生错误。`
@@ -225,10 +239,10 @@ exports.addFavorite = async (req, res) => {
         }
 
         // 检查是否已收藏
-        const existingFavorite = await Favorite.findOne({
+        const existingFavorite = await RelicFavorite.findOne({
             where: {
-                userId: req.body.userId,
-                artifactId: parseInt(req.body.artifactId)
+                user_id: req.body.userId,
+                relic_id: parseInt(req.body.artifactId)
             }
         });
 
@@ -240,12 +254,12 @@ exports.addFavorite = async (req, res) => {
 
         // 创建收藏对象
         const favorite = {
-            userId: req.body.userId,
-            artifactId: parseInt(req.body.artifactId)
+            user_id: req.body.userId,
+            relic_id: parseInt(req.body.artifactId)
         };
 
         // 保存到数据库
-        const data = await Favorite.create(favorite);
+        const data = await RelicFavorite.create(favorite);
         res.send(data);
     } catch (err) {
         res.status(500).send({
@@ -259,10 +273,10 @@ exports.removeFavorite = async (req, res) => {
     try {
         const { userId, artifactId } = req.params;
 
-        const num = await Favorite.destroy({
+        const num = await RelicFavorite.destroy({
             where: {
-                userId: userId,
-                artifactId: parseInt(artifactId)
+                user_id: userId,
+                relic_id: parseInt(artifactId)
             }
         });
 
@@ -288,28 +302,23 @@ exports.getFavorites = async (req, res) => {
         const userId = req.params.id;
 
         // 通过关联查询方式获取收藏
-        const user = await User.findByPk(userId, {
+        const favorites = await RelicFavorite.findAll({
+            where: { user_id: userId },
             include: [{
-                model: Favorite,
-                as: 'userFavorites',
-                include: [{
-                    model: Artifact
-                }]
-            }]
+                model: Artifact,
+                as: 'relic'
+            }],
+            order: [['favorite_id', 'DESC']]
         });
 
-        if (!user) {
+        if (!favorites) {
             return res.status(404).send({
-                message: `未找到ID为 ${userId} 的用户。`
+                message: `未找到ID为 ${userId} 的用户收藏。`
             });
         }
 
-        if (!user.userFavorites || user.userFavorites.length === 0) {
-            return res.send([]);
-        }
-
         // 提取文物对象
-        const artifacts = user.userFavorites.map(favorite => favorite.artifact).filter(Boolean);
+        const artifacts = favorites.map(favorite => favorite.relic).filter(Boolean);
         res.send(artifacts);
     } catch (err) {
         res.status(500).send({

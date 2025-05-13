@@ -23,50 +23,18 @@ db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
 // 导入模型
-db.artifacts = require('./artifact.model.js')(sequelize, Sequelize);
-db.users = require('./user.model.js')(sequelize, Sequelize);
-db.comments = require('./comment.model.js')(sequelize, Sequelize);
-db.favorites = require('./favorite.model.js')(sequelize, Sequelize);
+const artifactModels = require('./artifact.model.js')(sequelize, Sequelize);
+db.Artifact = artifactModels.Artifact;
+db.ArtifactPhoto = artifactModels.ArtifactPhoto;
+db.User = require('./user.model.js')(sequelize, Sequelize);
+db.RelicComment = require('./relic_comment.model.js')(sequelize, Sequelize);
+db.RelicFavorite = require('./relic_favorite.model.js')(sequelize, Sequelize);
 
-// 设置关联关系，但不添加外键约束
-db.comments.belongsTo(db.artifacts, {
-    foreignKey: 'artifactId',
-    constraints: false
-});
-db.comments.belongsTo(db.users, {
-    foreignKey: 'userId',
-    constraints: false
-});
-
-// 修改关联关系的名称，避免与属性冲突
-db.artifacts.hasMany(db.comments, {
-    foreignKey: 'artifactId',
-    as: 'commentList',
-    constraints: false
-});
-db.users.hasMany(db.comments, {
-    foreignKey: 'userId',
-    as: 'userComments',
-    constraints: false
-});
-
-db.favorites.belongsTo(db.artifacts, {
-    foreignKey: 'artifactId',
-    constraints: false
-});
-db.favorites.belongsTo(db.users, {
-    foreignKey: 'userId',
-    constraints: false
-});
-db.users.hasMany(db.favorites, {
-    foreignKey: 'userId',
-    as: 'userFavorites',
-    constraints: false
-});
-db.artifacts.hasMany(db.favorites, {
-    foreignKey: 'artifactId',
-    as: 'artifactFavorites',
-    constraints: false
+// 设置模型之间的关联关系
+Object.keys(db).forEach(modelName => {
+  if (db[modelName].associate) {
+    db[modelName].associate(db);
+  }
 });
 
 module.exports = db; 
