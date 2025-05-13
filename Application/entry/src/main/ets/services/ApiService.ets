@@ -4,6 +4,8 @@
 import http from '@ohos.net.http';
 import { Artifact } from '../model/ArtifactModel';
 import { User, UserRelicComment, RelicInfo } from '../model/UserModel';
+import { BrowseItem, BrowseRequestData, BrowseResponse, BrowseItemJson } from '../model/BrowseModel';
+import preferences from '@ohos.data.preferences';
 
 /**
  * API响应数据结构
@@ -56,7 +58,6 @@ interface GenericResponse {
  */
 interface ArtifactPhoto {
   photo_id: number;
-  relic_id: number;
   photo_url: string;
 }
 
@@ -458,6 +459,31 @@ export class ApiService {
   }
   
   /**
+   * 获取当前用户信息
+   */
+  async getCurrentUser(): Promise<User | null> {
+    try {
+      const prefs = await preferences.getPreferences(getContext(this), 'userPreferences');
+      const userInfoStr = await prefs.get('user_info', '') as string;
+      if (userInfoStr) {
+        const userData = JSON.parse(userInfoStr) as UserData;
+        return new User(
+          userData.user_id?.toString() || '',
+          userData.nickname?.toString() || '',
+          userData.img_url?.toString() || '',
+          userData.email?.toString() || '',
+          userData.isVerified ?? false,
+          []
+        );
+      }
+      return null;
+    } catch (error) {
+      console.error('获取当前用户信息失败:', error instanceof Error ? error.message : String(error));
+      return null;
+    }
+  }
+  
+  /**
    * 获取文物详情
    * @param id 文物ID
    */
@@ -467,7 +493,29 @@ export class ApiService {
         `${this.BASE_URL}/artifacts/${id}`,
         this.createRequestOptions(http.RequestMethod.GET)
       );
-      
+
+      // 添加浏览记录
+      const currentUser = await this.getCurrentUser();
+      if (currentUser) {
+        console.info('开始添加浏览记录，用户ID:', currentUser.id, '文物ID:', id);
+        try {
+          await this.sendRequest<GenericResponse>(
+            `${this.BASE_URL}/browse`,
+            this.createRequestOptions(
+              http.RequestMethod.POST,
+              JSON.stringify({
+                user_id: Number(currentUser.id),
+                relic_id: Number(id)
+              })
+            )
+          );
+          console.info('浏览记录添加成功');
+        } catch (browseError) {
+          console.error('添加浏览记录失败:', browseError);
+          // 浏览记录添加失败不影响文物详情的获取
+        }
+      }
+
       // 将API返回的数据转换为Artifact对象
       return new Artifact(
         response.relic_id.toString(),
@@ -824,6 +872,105 @@ export class ApiService {
     } catch (error) {
       console.error('查询收藏状态失败:', error);
       return false;
+    }
+  }
+
+  /**
+   * 获取用户浏览历史
+   * @param userId 用户ID
+   */
+  async getUserBrowses(userId: string): Promise<BrowseItem[]> {
+    try {
+      const response = await this.sendRequest<BrowseResponse | BrowseItemJson[]>(
+        `${this.BASE_URL}/browse/user/${userId}`,
+        this.createRequestOptions(http.RequestMethod.GET)
+      );
+      
+      // 处理数组响应
+      if (Array.isArray(response)) {
+        return response.map((item: BrowseItemJson) => BrowseItem.fromJson(item));
+      }
+      
+      // 处理对象响应
+      if (response && response.data) {
+        return response.data.map((item: BrowseItemJson) => BrowseItem.fromJson(item));
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('获取用户浏览历史失败:', error);
+      throw new ApiError(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  /**
+   * 获取用户最近浏览记录
+   * @param userId 用户ID
+   * @param limit 返回记录数量
+   */
+  async getRecentBrowses(userId: string, limit: number = 10): Promise<BrowseItem[]> {
+    try {
+      const response = await this.sendRequest<BrowseResponse>(
+        `${this.BASE_URL}/browse/user/${userId}/recent?limit=${limit}`,
+        this.createRequestOptions(http.RequestMethod.GET)
+      );
+      return response.data.map((item: BrowseItemJson) => BrowseItem.fromJson(item));
+    } catch (error) {
+      console.error('获取最近浏览记录失败:', error);
+      throw new ApiError(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  /**
+   * 添加浏览记录
+   * @param requestData 浏览记录请求数据
+   */
+  async addBrowse(requestData: BrowseRequestData): Promise<void> {
+    try {
+      console.info('发送添加浏览记录请求，数据:', JSON.stringify(requestData.toJson()));
+      await this.sendRequest<GenericResponse>(
+        `${this.BASE_URL}/browse`,
+        this.createRequestOptions(
+          http.RequestMethod.POST,
+          JSON.stringify(requestData.toJson())
+        )
+      );
+      console.info('添加浏览记录请求发送成功');
+    } catch (error) {
+      console.error('添加浏览记录失败:', error);
+      throw new ApiError(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  /**
+   * 清空用户浏览历史
+   * @param userId 用户ID
+   */
+  async clearBrowses(userId: string): Promise<void> {
+    try {
+      await this.sendRequest<GenericResponse>(
+        `${this.BASE_URL}/browse/user/${userId}`,
+        this.createRequestOptions(http.RequestMethod.DELETE)
+      );
+    } catch (error) {
+      console.error('清空浏览历史失败:', error);
+      throw new ApiError(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  /**
+   * 删除单条浏览记录
+   * @param browseId 浏览记录ID
+   */
+  async deleteBrowse(browseId: string): Promise<void> {
+    try {
+      await this.sendRequest<GenericResponse>(
+        `${this.BASE_URL}/browse/${browseId}`,
+        this.createRequestOptions(http.RequestMethod.DELETE)
+      );
+    } catch (error) {
+      console.error('删除浏览记录失败:', error);
+      throw new ApiError(error instanceof Error ? error.message : String(error));
     }
   }
 } 

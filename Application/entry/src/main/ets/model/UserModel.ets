@@ -50,6 +50,14 @@ export class User {
 }
 
 /**
+ * 文物图片接口
+ */
+export interface RelicPhoto {
+  photo_id: number;
+  photo_url: string;
+}
+
+/**
  * 文物信息接口
  */
 export interface RelicInfo {
@@ -60,6 +68,7 @@ export interface RelicInfo {
   museum: string;
   description: string;
   spare_id: number;
+  photos: RelicPhoto[];  // 添加文物图片数组
 }
 
 /**
