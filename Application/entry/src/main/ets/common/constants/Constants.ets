@@ -50,4 +50,10 @@ export class Constants {
     { id: 4, name: '书画' },
     { id: 5, name: '雕塑' }
   ];
+  /**
+   * Deepseek API 设置
+   */
+  static readonly DEEPSEEK_MODEL: string = 'deepseek-chat';
+  static readonly DEEPSEEK_API_URL: string = 'https://api.deepseek.com/chat/completions';
+  static readonly DEEPSEEK_API_KEY: string = 'sk-9acc0ab06bca4b4c9eea01753f635739';
 } 
