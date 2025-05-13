@@ -14,9 +14,6 @@ router.get("/relic/:id", relicFavorites.getFavorites);
 // 获取用户收藏
 router.get("/user/:id", relicFavorites.getUserFavorites);
 
-// 判断用户是否收藏某文物
-router.get('/user/:userId/:relicId', relicFavorites.isFavorite);
-
 // 取消收藏
 router.delete("/:userId/:relicId", relicFavorites.delete);
 

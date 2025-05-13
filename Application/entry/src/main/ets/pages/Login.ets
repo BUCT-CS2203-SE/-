@@ -1,7 +1,6 @@
 import { UserService } from '../services/UserService';
+import prompt from '@ohos.prompt';
 import router from '@ohos.router';
-import { Toast } from '../components/Toast';
-import { User } from '../model/UserModel';
 
 @Entry
 @Component
@@ -10,14 +9,10 @@ struct Login {
   @State password: string = '';
   @State isLoading: boolean = false;
   @State errorMsg: string = '';
-  @State usernameError: boolean = false;
-  @State passwordError: boolean = false;
-  @State showToast: boolean = false;
-  @State toastMessage: string = '';
   
   private userService: UserService = new UserService();
   
-  aboutToAppear(): void {
+  aboutToAppear() {
     // 获取路由参数
     const params = router.getParams() as Record<string, string>;
     if (params && params.phone) {
@@ -26,46 +21,37 @@ struct Login {
   }
   
   validateLogin(): boolean {
-    let isValid: boolean = true;
-    this.usernameError = false;
-    this.passwordError = false;
-    
     if (!this.username.trim()) {
-      this.errorMsg = '用户不存在或密码错误';
-      this.usernameError = true;
-      isValid = false;
+      this.errorMsg = '电话号不能为空';
+      return false;
     }
     if (!this.password) {
-      this.errorMsg = '用户不存在或密码错误';
-      this.passwordError = true;
-      isValid = false;
+      this.errorMsg = '密码不能为空';
+      return false;
     }
-    return isValid;
+    return true;
   }
   
-  handleLogin(): void {
+  handleLogin() {
     if (!this.validateLogin()) {
-      this.toastMessage = this.errorMsg;
-      this.showToast = true;
+      prompt.showToast({ message: this.errorMsg });
       return;
     }
     
     console.info('开始登录流程...');
     this.isLoading = true;
-    this.errorMsg = ''; // 清除之前的错误信息
-    this.usernameError = false;
-    this.passwordError = false;
-    
     this.userService.login(this.username, this.password)
-      .then((user: User) => {
+      .then((user) => {
         console.info(`登录成功，用户信息: ${JSON.stringify(user)}`);
         this.isLoading = false;
         
         try {
           // 显示登录成功提示
           console.info('显示登录成功提示...');
-          this.toastMessage = '登录成功';
-          this.showToast = true;
+          prompt.showToast({ 
+            message: '登录成功',
+            duration: 1500
+          });
           
           // 直接跳转到首页
           console.info('准备跳转到首页...');
@@ -83,15 +69,11 @@ struct Login {
       .catch((error: Error) => {
         console.error(`登录失败: ${error.message}`);
         this.isLoading = false;
-        
-        // 统一显示错误信息
-        this.errorMsg = '用户不存在或密码错误';
-        this.toastMessage = this.errorMsg;
-        this.showToast = true;
-        
-        // 设置输入框错误状态
-        this.usernameError = true;
-        this.passwordError = true;
+        this.errorMsg = `登录失败: ${error.message}`;
+        prompt.showToast({ 
+          message: this.errorMsg,
+          duration: 2000
+        });
       });
   }
   
@@ -213,17 +195,6 @@ struct Login {
           .height(50)
           .color('#FFD700')
           .margin({ top: 20 })
-      }
-      
-      // 添加 Toast 组件
-      if (this.showToast) {
-        Toast({
-          message: this.toastMessage,
-          duration: 2000,
-          onClose: () => {
-            this.showToast = false;
-          }
-        })
       }
     }
     .width('100%')

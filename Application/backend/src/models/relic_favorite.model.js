@@ -10,12 +10,12 @@
  * 收藏模型
  */
 module.exports = (sequelize, Sequelize) => {
-    const RelicFavorite = sequelize.define("user_fav_relic", {
-        fav_id: {
+    const RelicFavorite = sequelize.define("relic_favorite", {
+        favorite_id: {
             type: Sequelize.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            comment: '主键，用户收藏id，唯一标识'
+            comment: '主键，收藏id，唯一标识'
         },
         user_id: {
             type: Sequelize.INTEGER,
@@ -36,7 +36,7 @@ module.exports = (sequelize, Sequelize) => {
             }
         }
     }, {
-        tableName: 'user_fav_relic',
+        tableName: 'relic_favorite',
         timestamps: false, // 不使用 Sequelize 的默认时间戳
         charset: 'utf8mb4',
         collate: 'utf8mb4_general_ci'

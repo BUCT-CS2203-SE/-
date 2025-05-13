@@ -1,6 +1,6 @@
 import { UserService } from '../services/UserService';
+import prompt from '@ohos.prompt';
 import router from '@ohos.router';
-import { Toast } from '../components/Toast';
 
 @Entry
 @Component
@@ -11,8 +11,6 @@ struct Register {
   @State email: string = '';
   @State isLoading: boolean = false;
   @State errorMsg: string = '';
-  @State showToast: boolean = false;
-  @State toastMessage: string = '';
   
   private userService: UserService = new UserService();
   
@@ -43,8 +41,7 @@ struct Register {
   
   handleRegister() {
     if (!this.validateRegister()) {
-      this.toastMessage = this.errorMsg;
-      this.showToast = true;
+      prompt.showToast({ message: this.errorMsg });
       return;
     }
     
@@ -58,8 +55,10 @@ struct Register {
         try {
           // 显示注册成功提示
           console.info('显示注册成功提示...');
-          this.toastMessage = '注册成功，请登录';
-          this.showToast = true;
+          prompt.showToast({ 
+            message: response.message || '注册成功，请登录',
+            duration: 1500
+          });
           
           // 直接跳转到登录页面
           console.info('准备跳转到登录页面...');
@@ -83,9 +82,11 @@ struct Register {
       .catch((error: Error) => {
         console.error(`注册失败: ${error.message}`);
         this.isLoading = false;
-        this.errorMsg = '注册失败，请稍后重试';
-        this.toastMessage = this.errorMsg;
-        this.showToast = true;
+        this.errorMsg = `注册失败: ${error.message}`;
+        prompt.showToast({ 
+          message: this.errorMsg,
+          duration: 2000
+        });
       });
   }
   
@@ -234,17 +235,6 @@ struct Register {
           .height(50)
           .color('#FFD700')
           .margin({ top: 20 })
-      }
-      
-      // 添加 Toast 组件
-      if (this.showToast) {
-        Toast({
-          message: this.toastMessage,
-          duration: 2000,
-          onClose: () => {
-            this.showToast = false;
-          }
-        })
       }
     }
     .width('100%')

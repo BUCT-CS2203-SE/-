@@ -2,154 +2,83 @@ import { Constants } from '../common/constants/Constants';
 import router from '@ohos.router';
 import prompt from '@ohos.prompt';
 import picker from '@ohos.file.picker';
+import { PostService } from '../services/PostService';
+import { Post } from '../model/PostModel';
+import { formatDate } from '../utils/DateUtils';
+import { getUserInfo } from '../utils/UserUtils';
+
+/**
+ * 路由参数接口
+ */
+interface RouteParams {
+  isPostOnly?: boolean;
+}
 
 @Entry
 @Component
 struct Dynamic {
-  @State posts: Array<Post> = [];
   @State newPostContent: string = '';
-  @State showCommentInput: boolean = false;
-  @State currentPostId: number = -1;
-  @State commentContent: string = '';
-  @State favoritePosts: Set<number> = new Set();
   @State selectedImages: string[] = [];
+  @State isPublishing: boolean = false;
+  private isPostOnly: boolean = true;
 
-  @Builder
-  PostBuilder(post: Post) {
-    Column() {
-      // 用户信息和发布时间
-      Row() {
-        // 用户头像
-        Image(post.avatarUrl || $r('app.media.icon'))
-          .width(40)
-          .height(40)
-          .borderRadius(20)
-          .margin({ right: 10 })
-        
-        Column() {
-          // 用户名
-          Text(post.username)
-            .fontSize(16)
-            .fontWeight(FontWeight.Bold)
-          
-          // 发布时间
-          Text(post.createTime)
-            .fontSize(12)
-            .fontColor('#999999')
-        }
-        .alignItems(HorizontalAlign.Start)
-      }
-      .width('100%')
-      .justifyContent(FlexAlign.Start)
-      .margin({ bottom: 10 })
-
-      // 动态内容
-      Text(post.content)
-        .fontSize(16)
-        .width('100%')
-        .margin({ bottom: 10 })
-
-      // 图片展示
-      if (post.images && post.images.length > 0) {
-        Grid() {
-          ForEach(post.images, (image: string) => {
-            GridItem() {
-              Image(image)
-                .width('100%')
-                .height('100%')
-                .objectFit(ImageFit.Cover)
-            }
-          })
-        }
-        .columnsTemplate('1fr 1fr 1fr')
-        .rowsTemplate('1fr 1fr 1fr')
-        .columnsGap(5)
-        .rowsGap(5)
-        .width('100%')
-        .height(300)
-        .margin({ bottom: 10 })
-      }
-
-      // 操作栏
-      Row() {
-        // 点赞按钮
-        Row() {
-          Text(post.isLiked ? '♥' : '♡')
-            .fontSize(20)
-            .fontColor(post.isLiked ? '#FF0000' : '#666666')
-          Text(post.likes.toString())
-            .fontSize(14)
-            .margin({ left: 5 })
-        }
-        .onClick(() => {
-          post.isLiked = !post.isLiked;
-          post.likes += post.isLiked ? 1 : -1;
-        })
-        .margin({ right: 20 })
-
-        // 评论按钮
-        Row() {
-          Text('💬')
-            .fontSize(20)
-          Text(post.comments.length.toString())
-            .fontSize(14)
-            .margin({ left: 5 })
-        }
-        .onClick(() => {
-          this.currentPostId = post.id;
-          this.showCommentInput = true;
-        })
-        .margin({ right: 20 })
-
-        // 收藏按钮
-        Row() {
-          Text(this.favoritePosts.has(post.id) ? '★' : '☆')
-            .fontSize(20)
-            .fontColor(this.favoritePosts.has(post.id) ? '#FFD700' : '#666666')
-        }
-        .onClick(() => {
-          if (this.favoritePosts.has(post.id)) {
-            this.favoritePosts.delete(post.id);
-            prompt.showToast({ message: '已取消收藏' });
-          } else {
-            this.favoritePosts.add(post.id);
-            prompt.showToast({ message: '已收藏' });
-          }
-        })
-      }
-      .width('100%')
-      .justifyContent(FlexAlign.Start)
-      .margin({ bottom: 10 })
-
-      // 评论列表
-      if (post.comments.length > 0) {
-        Column() {
-          ForEach(post.comments, (comment: Comment) => {
-            Row() {
-              Text(comment.username)
-                .fontSize(14)
-                .fontWeight(FontWeight.Bold)
-                .fontColor('#1698CE')
-              Text(comment.content)
-                .fontSize(14)
-                .margin({ left: 5 })
-            }
-            .width('100%')
-            .justifyContent(FlexAlign.Start)
-            .margin({ bottom: 5 })
-          })
-        }
-        .width('100%')
-        .padding(10)
-        .backgroundColor('#F5F5F5')
-        .borderRadius(5)
-      }
+  aboutToAppear() {
+    // 获取路由参数
+    const params = router.getParams() as RouteParams;
+    if (params && params.isPostOnly !== undefined) {
+      this.isPostOnly = params.isPostOnly;
     }
-    .width('100%')
-    .padding(16)
-    .backgroundColor('#FFFFFF')
-    .borderRadius(10)
-    .margin({ bottom: 10 })
+  }
+
+  async publishPost() {
+    if (!this.newPostContent.trim()) {
+      prompt.showToast({ message: '请输入动态内容' });
+      return;
+    }
+
+    try {
+      this.isPublishing = true;
+      const userInfo = await getUserInfo();
+      if (!userInfo) {
+        prompt.showToast({ message: '请先登录' });
+        this.isPublishing = false;
+        return;
+      }
+
+      const now = new Date();
+      const postData: Partial<Post> = {
+        post_id: `post_${now.getTime()}`,
+        content: this.newPostContent,
+        post_img_url: this.selectedImages.length > 0 ? this.selectedImages[0] : undefined,
+        user_id: userInfo.user_id,
+        nickname: userInfo.nickname,
+        img_url: userInfo.img_url,
+        create_time: formatDate(now, 'YYYY-MM-DD HH:mm:ss'),
+        create_timestamp: now.getTime(),
+        likes: 0,
+        is_favorited: 0
+      };
+
+      const result = await PostService.createPost(postData);
+      if (result.code === 0) {
+        prompt.showToast({ message: '发布成功' });
+        // 清空内容
+        this.newPostContent = '';
+        this.selectedImages = [];
+        
+        // 返回首页并跳转到动态标签
+        setTimeout(() => {
+          router.back();
+        }, 500);
+          } else {
+        prompt.showToast({ message: result.message || '发布失败' });
+      }
+    } catch (error) {
+      console.error('发布帖子失败:', error);
+      prompt.showToast({ message: '发布失败，请稍后重试' });
+    } finally {
+      this.isPublishing = false;
+    }
   }
 
   build() {
@@ -227,37 +156,32 @@ struct Dynamic {
         }
 
         // 发布按钮
-        Button('发布', { type: ButtonType.Normal })
+        Button({ type: ButtonType.Normal, stateEffect: true }) {
+          Row() {
+            if (this.isPublishing) {
+              LoadingProgress()
+                .width(24)
+                .height(24)
+                .color('#FFFFFF')
+                .margin({ right: 8 })
+            }
+            Text('发布')
+              .fontColor('#FFFFFF')
+          }
+        }
           .width('100%')
           .height(40)
           .backgroundColor('#1698CE')
-          .fontColor('#FFFFFF')
           .borderRadius(20)
+        .enabled(!this.isPublishing)
           .onClick(() => {
-            if (this.newPostContent.trim()) {
-              this.posts.unshift({
-                id: this.posts.length + 1,
-                username: '当前用户',
-                avatarUrl: '',
-                content: this.newPostContent,
-                createTime: new Date().toLocaleString(),
-                likes: 0,
-                isLiked: false,
-                images: this.selectedImages,
-                comments: []
-              });
-              this.newPostContent = '';
-              this.selectedImages = [];
-              prompt.showToast({ message: '发布成功' });
-              router.back();
-            } else {
-              prompt.showToast({ message: '请输入动态内容' });
-            }
+          this.publishPost();
           })
       }
       .width('100%')
       .padding(16)
       .backgroundColor('#FFFFFF')
+      .layoutWeight(1)
     }
     .width('100%')
     .height('100%')
@@ -276,21 +200,4 @@ struct Dynamic {
         console.error(`选择图片失败: ${err.message}`);
       });
   }
-}
-
-interface Post {
-  id: number;
-  username: string;
-  avatarUrl: string;
-  content: string;
-  createTime: string;
-  likes: number;
-  isLiked: boolean;
-  images: string[];
-  comments: Array<Comment>;
-}
-
-interface Comment {
-  username: string;
-  content: string;
 } 
