@@ -1,8 +1,11 @@
-import { fileIo } from '@kit.CoreFileKit';
-import { BusinessError, request } from '@kit.BasicServicesKit';
+import { bucket } from '@myapp/common';
+import request from '@ohos.request';
+import hilog from '@ohos.hilog';
+import picker from '@ohos.file.picker';
+import fileIo from '@ohos.fileio';
+import router from '@ohos.router';
+import { BusinessError } from '@kit.BasicServicesKit';
 import { cloudStorage } from '@kit.CloudFoundationKit';
-import { hilog } from '@kit.PerformanceAnalysisKit';
-import { photoAccessHelper } from '@kit.MediaLibraryKit';
 
 const HILOG_DOMAIN = 0x0000;
 const TAG = '[CloudStorage]';
@@ -11,7 +14,6 @@ const UPDATE_PROGRESS_MIN_VALUE = 0;
 const UPDATE_PROGRESS_MAX_VALUE = 100;
 const UPDATE_PROGRESS_LENGTH = 5;
 const MAX_SELECT_NUMBER = 1;
-const bucket: cloudStorage.StorageBucket = cloudStorage.bucket();
 
 type UploadCompleteCallback = (uploadSuccess: boolean) => void;
 
@@ -153,13 +155,21 @@ export struct CloudStorage {
 
   private async selectImage(): Promise<string> {
     return new Promise((resolve: (selectUri: string) => void, reject: (err: Error) => void) => {
-      const photoSelectOptions = new photoAccessHelper.PhotoSelectOptions();
-      // 过滤选择媒体文件类型为IMAGE
-      photoSelectOptions.MIMEType = photoAccessHelper.PhotoViewMIMETypes.IMAGE_TYPE;
-      photoSelectOptions.maxSelectNumber = MAX_SELECT_NUMBER;
-      new photoAccessHelper.PhotoViewPicker().select(photoSelectOptions)
-        .then((photoSelectResult: photoAccessHelper.PhotoSelectResult) => {
-          resolve(photoSelectResult.photoUris[0]);
+      // 使用标准API替代
+      const photoViewPicker = new picker.PhotoViewPicker();
+      // 设置选择器参数
+      const photoSelectOptions: picker.PhotoSelectOptions = {
+        MIMEType: picker.PhotoViewMIMETypes.IMAGE_TYPE,
+        maxSelectNumber: MAX_SELECT_NUMBER
+      };
+      
+      photoViewPicker.select(photoSelectOptions)
+        .then((photoSelectResult) => {
+          if (photoSelectResult && photoSelectResult.photoUris && photoSelectResult.photoUris.length > 0) {
+            resolve(photoSelectResult.photoUris[0]);
+          } else {
+            reject(new Error('未选择图片'));
+          }
         })
         .catch((err: Error) => {
           reject(err);
@@ -211,7 +221,7 @@ export struct CloudStorage {
 
   private copyFile(src: string, dest: string) {
     const srcFile = fileIo.openSync(src);
-    const dstFile = fileIo.openSync(dest, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE);
+    const dstFile = fileIo.openSync(dest, 2 | 256);
     fileIo.copyFileSync(srcFile.fd, dstFile.fd);
     fileIo.closeSync(srcFile);
     fileIo.closeSync(dstFile);

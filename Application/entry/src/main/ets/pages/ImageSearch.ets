@@ -1,10 +1,15 @@
 import { Artifact } from '../model/ArtifactModel';
 import { ArtifactService } from '../services/ArtifactService';
-import media from '@ohos.multimedia.media';
-import fileIO from '@ohos.fileio';
-import image from '@ohos.multimedia.image';
+import camera from '@ohos.multimedia.camera';
 import router from '@ohos.router';
-import prompt from '@ohos.prompt';
+import promptAction from '@ohos.promptAction';
+import common from '@ohos.app.ability.common';
+import { DeepseekService } from '../services/DeepseekService';
+import fileIo from '@ohos.fileio';
+import picker from '@ohos.file.picker';
+import fileAccess from '@ohos.file.fs';
+import uri from '@ohos.uri';
+import image from '@ohos.multimedia.image';
 
 /**
  * 错误接口
@@ -13,73 +18,191 @@ interface ErrorWithMessage {
   message: string;
 }
 
+/**
+ * 相机选项接口
+ */
+interface CameraOptions {
+  position: camera.CameraPosition;
+}
+
+/**
+ * 相机结果接口
+ */
+interface CameraResult {
+  uri: string;
+}
+
+/**
+ * 图片选择选项接口
+ */
+interface PhotoPickerOptions {
+  MIMEType: string;
+  maxSelectNumber: number;
+}
+
+/**
+ * 图片选择结果接口
+ */
+interface PhotoPickerResult {
+  photoUris: string[];
+}
+
+// 文件句柄接口
+interface FileHandle {
+  fd: number;
+}
+
 @Entry
 @Component
 struct ImageSearch {
   @State searchResults: Artifact[] = [];
   @State isLoading: boolean = false;
   @State imageUri: string = '';
+  @State imagePath: string = '';
   @State errorMsg: string = '';
+  @State searchKeywords: string[] = [];
+  @State imageBase64: string = '';
   
   private artifactService: ArtifactService = new ArtifactService();
+  private deepseekService: DeepseekService = new DeepseekService();
   
-  takePhoto() {
-    // 在实际实现中，应调用相机API拍照
-    // 以下为示例代码，实际项目中需要根据HarmonyOS相机API实现
+  // 获取应用上下文
+  private context = getContext(this) as common.UIAbilityContext;
+  
+  async takePhoto() {
     try {
-      // TODO: 实现相机拍照功能
-      prompt.showToast({ message: '拍照功能将在实际项目中实现' });
+      // 调用相机API拍照
+      const cameraOptions: CameraOptions = {
+        position: camera.CameraPosition.CAMERA_POSITION_BACK
+      };
+      
+      // 使用系统相机拍照
+      const photoPicker = new picker.PhotoViewPicker();
+      
+      // 使用系统选择器拍照 - 由于startCapture不存在，使用select方法
+      const result = await photoPicker.select({
+        MIMEType: picker.PhotoViewMIMETypes.IMAGE_TYPE,
+        maxSelectNumber: 1
+      });
+      
+      if (result && result.photoUris && result.photoUris.length > 0) {
+        this.imageUri = result.photoUris[0];
+        this.processImage();
+      } else {
+        this.errorMsg = '拍照失败，请重试';
+        promptAction.showToast({ message: this.errorMsg });
+      }
     } catch (err) {
       this.errorMsg = `拍照失败: ${(err as ErrorWithMessage).message}`;
-      prompt.showToast({ message: this.errorMsg });
+      promptAction.showToast({ message: this.errorMsg });
+      console.error(this.errorMsg);
     }
   }
   
-  selectFromGallery() {
-    // 在实际实现中，应调用文件选择器API选择图片
-    // 以下为示例代码，实际项目中需要根据HarmonyOS文件选择API实现
+  async selectFromGallery() {
     try {
-      // TODO: 实现从相册选择图片功能
-      prompt.showToast({ message: '选择图片功能将在实际项目中实现' });
+      // 创建媒体库选择器
+      const photoPicker = new picker.PhotoViewPicker();
       
-      // 模拟选择图片后的处理
-      this.imageUri = 'mock_image_uri';
-      this.searchByImage();
+      // 设置选择器参数（单选图片）
+      const photoSelectParam: picker.PhotoSelectOptions = {
+        MIMEType: picker.PhotoViewMIMETypes.IMAGE_TYPE,
+        maxSelectNumber: 1
+      };
+      
+      // 显示选择器
+      const result = await photoPicker.select(photoSelectParam);
+      
+      if (result && result.photoUris && result.photoUris.length > 0) {
+        this.imageUri = result.photoUris[0];
+        this.processImage();
+      } else {
+        this.errorMsg = '未选择任何图片';
+        promptAction.showToast({ message: this.errorMsg });
+      }
     } catch (err) {
       this.errorMsg = `选择图片失败: ${(err as ErrorWithMessage).message}`;
-      prompt.showToast({ message: this.errorMsg });
+      promptAction.showToast({ message: this.errorMsg });
+      console.error(this.errorMsg);
     }
   }
   
-  searchByImage() {
-    if (!this.imageUri) {
-      prompt.showToast({ message: '请先选择或拍摄图片' });
-      return;
-    }
-    
+  // 处理图片并搜索
+  processImage() {
     this.isLoading = true;
-    
-    // 在实际实现中，应读取图片数据并转为Base64
-    // 以下为示例代码，实际项目中需要根据HarmonyOS文件IO实现
+    this.searchResults = [];
+    this.searchKeywords = [];
+
     try {
-      // 模拟图片数据
-      let imageData = 'base64_encoded_image_data';
-      
-      this.artifactService.searchByImage(imageData)
-        .then((artifacts) => {
-          this.searchResults = artifacts;
+      console.info('选中的图片路径:', this.imageUri);
+
+      // 使用URI助手和媒体库处理选中的图片
+      (async () => {
+        try {
+          // 使用文件管理API，而不是直接访问文件系统
+          
+          // 创建图像包装对象
+          const imageSource: image.ImageSource = image.createImageSource(this.imageUri);
+          if (!imageSource) {
+            throw new Error('无法创建图像源');
+          }
+          
+          // 将图像打包为buffer
+          const pixelMap: image.PixelMap = await imageSource.createPixelMap();
+          // 获取pixelMap的数据
+          const pixelMapAccess: number = await pixelMap.getPixelBytesNumber();
+          const arrayBuffer: ArrayBuffer = new ArrayBuffer(pixelMapAccess);
+          await pixelMap.readPixelsToBuffer(arrayBuffer);
+          
+          // 转为Base64
+          const base64Data: string = this.arrayBufferToBase64(arrayBuffer);
+          console.info('成功使用图像API读取图片并转换为Base64');
+
+          // 使用base64数据
+          Promise.all([
+            this.deepseekService.recognizeImage(base64Data)
+              .then((keywords: string[]) => {
+                this.searchKeywords = keywords;
+              })
+              .catch((err: Error) => {
+                console.error('获取关键词失败:', err instanceof Error ? err.message : String(err));
+                this.searchKeywords = ['文物', '古代', '历史文化'];
+              }),
+            
+            this.artifactService.searchByImage(base64Data)
+              .then((artifacts: Artifact[]) => {
+                this.searchResults = artifacts;
+                if (artifacts.length === 0) {
+                  promptAction.showToast({ message: '未找到相关文物' });
+                }
+              })
+              .catch((err: ErrorWithMessage) => {
+                this.errorMsg = `搜索失败: ${err.message}`;
+                promptAction.showToast({ message: this.errorMsg });
+              })
+          ]).finally(() => {
+            this.isLoading = false;
+          });
+        } catch (error) {
+          this.errorMsg = `读取图片失败: ${(error as ErrorWithMessage).message}`;
           this.isLoading = false;
-        })
-        .catch((err: ErrorWithMessage) => {
-          this.errorMsg = `搜索失败: ${err.message}`;
-          this.isLoading = false;
-          prompt.showToast({ message: this.errorMsg });
-        });
+          promptAction.showToast({ message: this.errorMsg });
+          console.error('图片处理错误:', error);
+        }
+      })();
     } catch (err) {
-      this.errorMsg = `读取图片失败: ${(err as ErrorWithMessage).message}`;
+      this.errorMsg = `处理图片失败: ${(err as ErrorWithMessage).message}`;
       this.isLoading = false;
-      prompt.showToast({ message: this.errorMsg });
+      promptAction.showToast({ message: this.errorMsg });
+      console.error('图片处理主错误:', err);
     }
+  }
+  
+  // ArrayBuffer转Base64
+  private arrayBufferToBase64(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    const binary = bytes.reduce((acc: string, byte: number) => acc + String.fromCharCode(byte), '');
+    return binary;
   }
   
   build() {
@@ -198,7 +321,7 @@ struct ImageSearch {
                 .fontSize(14)
                 .fontColor('#666666')
             }
-            .width('100%')
+            .width('90%')
             .height(200)
             .justifyContent(FlexAlign.Center)
             .backgroundColor('#FFFFFF')
@@ -206,61 +329,84 @@ struct ImageSearch {
             .border({ width: 1, color: '#8B0000' })  // 深红色边框
             .shadow({ radius: 3, color: '#8B0000', offsetX: 0, offsetY: 2 })
           } else if (this.searchResults.length > 0) {
-            Text('搜索结果')
-              .fontSize(20)
-              .fontWeight(FontWeight.Bold)
-              .fontColor('#8B0000')  // 深红色
-              .alignSelf(ItemAlign.Start)
-              .margin({ left: '5%', bottom: 10 })
-            
-            List({ space: 10 }) {
-              ForEach(this.searchResults, (artifact: Artifact) => {
-                ListItem() {
-                  Row() {
-                    Image(artifact.imageUrl || $r('app.media.placeholder'))
-                      .width(100)
-                      .height(100)
-                      .borderRadius(10)
-                      .objectFit(ImageFit.Cover)
-                      .border({ width: 1, color: '#8B0000' })  // 深红色边框
-                    
-                    Column() {
-                      Text(artifact.name)
-                        .fontSize(18)
-                        .fontWeight(FontWeight.Bold)
-                        .fontColor('#8B0000')  // 深红色
-                      
-                      Text(artifact.era)
-                        .fontSize(14)
-                        .fontColor('#666666')
-                        .margin({ top: 5 })
-                      
-                      Text(artifact.museum)
-                        .fontSize(14)
-                        .fontColor('#666666')
-                        .margin({ top: 5 })
-                    }
-                    .alignItems(HorizontalAlign.Start)
-                    .margin({ left: 15 })
-                    .layoutWeight(1)
-                  }
-                  .width('100%')
-                  .padding(15)
-                  .backgroundColor('#FFFFFF')
-                  .borderRadius(15)
-                  .border({ width: 1, color: '#8B0000' })  // 深红色边框
-                  .shadow({ radius: 3, color: '#8B0000', offsetX: 0, offsetY: 2 })
-                  .onClick(() => {
-                    router.pushUrl({
-                      url: 'pages/ArtifactDetail',
-                      params: { artifactId: artifact.id }
-                    });
-                  })
+            Column() {
+              // 关键词显示
+              if (this.searchKeywords.length > 0) {
+                Row() {
+                  Text('识别关键词: ')
+                    .fontSize(16)
+                    .fontWeight(FontWeight.Bold)
+                    .fontColor('#8B0000')  // 深红色
+                  
+                  Text(this.searchKeywords.join(', '))
+                    .fontSize(16)
+                    .fontColor('#666666')
                 }
-              })
+                .width('100%')
+                .padding(10)
+                .margin({ bottom: 10 })
+                .backgroundColor('#FFFFFF')
+                .borderRadius(10)
+                .border({ width: 1, color: '#8B0000' })
+              }
+              
+              Text('搜索结果')
+                .fontSize(20)
+                .fontWeight(FontWeight.Bold)
+                .fontColor('#8B0000')  // 深红色
+                .alignSelf(ItemAlign.Start)
+                .margin({ bottom: 10 })
+              
+              List({ space: 10 }) {
+                ForEach(this.searchResults, (artifact: Artifact) => {
+                  ListItem() {
+                    Row() {
+                      Image(artifact.imageUrl || $r('app.media.placeholder'))
+                        .width(100)
+                        .height(100)
+                        .borderRadius(10)
+                        .objectFit(ImageFit.Cover)
+                        .border({ width: 1, color: '#8B0000' })  // 深红色边框
+                      
+                      Column() {
+                        Text(artifact.name)
+                          .fontSize(18)
+                          .fontWeight(FontWeight.Bold)
+                          .fontColor('#8B0000')  // 深红色
+                        
+                        Text(artifact.era)
+                          .fontSize(14)
+                          .fontColor('#666666')
+                          .margin({ top: 5 })
+                        
+                        Text(artifact.museum)
+                          .fontSize(14)
+                          .fontColor('#666666')
+                          .margin({ top: 5 })
+                      }
+                      .alignItems(HorizontalAlign.Start)
+                      .margin({ left: 15 })
+                      .layoutWeight(1)
+                    }
+                    .width('100%')
+                    .padding(15)
+                    .backgroundColor('#FFFFFF')
+                    .borderRadius(15)
+                    .border({ width: 1, color: '#8B0000' })  // 深红色边框
+                    .shadow({ radius: 3, color: '#8B0000', offsetX: 0, offsetY: 2 })
+                    .onClick(() => {
+                      router.pushUrl({
+                        url: 'pages/ArtifactDetail',
+                        params: { artifactId: artifact.id }
+                      });
+                    })
+                  }
+                })
+              }
+              .width('100%')
+              .layoutWeight(1)
             }
             .width('90%')
-            .layoutWeight(1)
           } else if (this.imageUri) {
             Column() {
               Image($r('app.media.no_result'))
@@ -278,7 +424,7 @@ struct ImageSearch {
                 .fontSize(14)
                 .fontColor('#666666')
             }
-            .width('100%')
+            .width('90%')
             .height(200)
             .justifyContent(FlexAlign.Center)
             .backgroundColor('#FFFFFF')

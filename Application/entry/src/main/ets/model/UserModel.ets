@@ -1,3 +1,4 @@
+
 /**
  * 用户数据模型
  */
@@ -6,34 +7,34 @@ export class User {
    * 用户ID
    */
   id: string;
-  
+
   /**
    * 用户名
    */
   username: string;
-  
+
   /**
    * 头像URL
    */
   avatarUrl: string;
-  
+
   /**
    * 电子邮箱
    */
   email: string;
-  
+
   /**
    * 是否已认证
    */
   isVerified: boolean;
-  
+
   /**
    * 收藏的文物ID列表
    */
   favorites: string[];
-  
-  constructor(id: string, username: string, avatarUrl: string = '', 
-              email: string = '', isVerified: boolean = false, favorites: string[] = []) {
+
+  constructor(id: string, username: string, avatarUrl: string = '',
+    email: string = '', isVerified: boolean = false, favorites: string[] = []) {
     this.id = id;
     this.username = username;
     this.avatarUrl = avatarUrl;
@@ -51,39 +52,39 @@ export class UserComment {
    * 评论ID
    */
   id: string;
-  
+
   /**
    * 用户ID
    */
   userId: string;
-  
+
   /**
    * 用户名
    */
   username: string;
-  
+
   /**
    * 用户头像
    */
   avatarUrl: string;
-  
+
   /**
    * 评论内容
    */
   content: string;
-  
+
   /**
    * 评论时间
    */
   createTime: string;
-  
+
   /**
    * 文物ID
    */
   artifactId: string;
-  
+
   constructor(id: string, userId: string, username: string, avatarUrl: string,
-              content: string, createTime: string, artifactId: string) {
+    content: string, createTime: string, artifactId: string) {
     this.id = id;
     this.userId = userId;
     this.username = username;

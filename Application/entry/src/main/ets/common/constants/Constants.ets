@@ -28,7 +28,14 @@ export class Constants {
   /**
    * API基础URL
    */
-  static readonly BASE_URL: string = 'http://your-api-server.com/api';
+  static readonly BASE_URL: string = 'https://api.deepseek.com';
+
+  /**
+   * Deepseek API配置
+   */
+  static readonly DEEPSEEK_API_URL: string = 'https://api.deepseek.com/chat/completions';
+  static readonly DEEPSEEK_API_KEY: string = 'YOUR_DEEPSEEK_API_KEY'; // 替换为您的实际API密钥
+  static readonly DEEPSEEK_MODEL: string = 'deepseek-chat'; // 使用DeepSeek-V3模型
   
   /**
    * 首页Tab配置
