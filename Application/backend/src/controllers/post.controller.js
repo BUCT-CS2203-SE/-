@@ -13,6 +13,14 @@ const { Op } = require("sequelize");
 // 创建帖子
 exports.create = async (req, res) => {
     try {
+        // 检查请求数据完整性
+        if (!req.body.content || !req.body.user_id) {
+            return res.status(400).json({
+                message: "帖子内容和用户ID不能为空",
+                code: "INVALID_INPUT"
+            });
+        }
+
         // 精确采集前端提交的所有字段
         const post = await Post.create({
             post_id: req.body.post_id,
@@ -32,9 +40,32 @@ exports.create = async (req, res) => {
         });
     } catch (error) {
         console.error('创建帖子失败:', error);
+
+        // 更详细的错误处理
+        if (error.name === 'SequelizeConnectionError' ||
+            error.name === 'SequelizeConnectionRefusedError' ||
+            error.name === 'SequelizeHostNotFoundError' ||
+            error.name === 'SequelizeHostNotReachableError') {
+            return res.status(503).json({
+                message: "数据库连接失败，请检查网络连接",
+                error: "NETWORK_ERROR",
+                details: error.message
+            });
+        }
+
+        // 数据验证错误
+        if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
+            return res.status(400).json({
+                message: "数据验证失败",
+                error: "VALIDATION_ERROR",
+                details: error.message
+            });
+        }
+
         res.status(500).json({
             message: "创建帖子失败",
-            error: error.message
+            error: "SERVER_ERROR",
+            details: error.message
         });
     }
 };
@@ -46,14 +77,14 @@ exports.findAll = async (req, res) => {
         console.log('db对象:', Object.keys(db));
         console.log('Post模型状态:', db.Post ? '存在' : '不存在');
         console.log('Post对象详情:', db.Post);
-        
+
         // 默认值设置
         const { keyword, page = 1, pageSize = 10 } = req.query;
         const offset = (page - 1) * pageSize;
-        
+
         // 查询过程完整记录日志
         console.log('查询参数:', { keyword, page, pageSize, offset });
-        
+
         // 构建查询条件（仅当有关键词时）
         const where = {};
         if (keyword) {
@@ -122,9 +153,23 @@ exports.findAll = async (req, res) => {
         });
     } catch (error) {
         console.error('获取帖子列表失败:', error);
+
+        // 数据库连接错误特殊处理
+        if (error.name === 'SequelizeConnectionError' ||
+            error.name === 'SequelizeConnectionRefusedError' ||
+            error.name === 'SequelizeHostNotFoundError' ||
+            error.name === 'SequelizeHostNotReachableError') {
+            return res.status(503).json({
+                message: "数据库连接失败，请检查网络连接",
+                error: "NETWORK_ERROR",
+                details: error.message
+            });
+        }
+
         res.status(500).json({
             message: "获取帖子列表失败",
-            error: error.message
+            error: "SERVER_ERROR",
+            details: error.message
         });
     }
 };
@@ -176,9 +221,23 @@ exports.findOne = async (req, res) => {
         res.json(post);
     } catch (error) {
         console.error('获取帖子详情失败:', error);
+
+        // 数据库连接错误特殊处理
+        if (error.name === 'SequelizeConnectionError' ||
+            error.name === 'SequelizeConnectionRefusedError' ||
+            error.name === 'SequelizeHostNotFoundError' ||
+            error.name === 'SequelizeHostNotReachableError') {
+            return res.status(503).json({
+                message: "数据库连接失败，请检查网络连接",
+                error: "NETWORK_ERROR",
+                details: error.message
+            });
+        }
+
         res.status(500).json({
             message: "获取帖子详情失败",
-            error: error.message
+            error: "SERVER_ERROR",
+            details: error.message
         });
     }
 };
@@ -271,7 +330,7 @@ exports.getComments = async (req, res) => {
             error: error.message
         });
     }
-}; 
+};
 
 // 更新帖子点赞数
 exports.updateLikes = async (req, res) => {
@@ -330,7 +389,7 @@ exports.updateFavorite = async (req, res) => {
 
         // 布尔转数字转换
         const newFavoriteValue = req.body.is_favorited ? 1 : 0;
-        
+
         console.log('尝试更新收藏状态:', {
             postId: req.params.id,
             newValue: newFavoriteValue
@@ -339,7 +398,7 @@ exports.updateFavorite = async (req, res) => {
         // 使用批量更新API
         const [updatedRows] = await Post.update(
             { is_favorited: newFavoriteValue },
-            { 
+            {
                 where: { post_id: req.params.id }
             }
         );
@@ -432,7 +491,7 @@ exports.unfavorite = async (req, res) => {
             postId: post.post_id,
             currentFavorite: post.is_favorited
         });
-        
+
         console.log('尝试更新收藏状态为0:', {
             postId: req.params.id
         });
@@ -440,7 +499,7 @@ exports.unfavorite = async (req, res) => {
         // 与updateFavorite极为相似，但直接硬编码值0
         const [updatedRows] = await Post.update(
             { is_favorited: 0 },
-            { 
+            {
                 where: { post_id: req.params.id }
             }
         );

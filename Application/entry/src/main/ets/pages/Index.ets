@@ -13,6 +13,15 @@ import { Post as PostModel, Comment as CommentModel } from '../model/PostModel';
 import { CommentData } from '../model/CommentModel';
 
 /**
+ * 动态页面路由参数接口
+ */
+interface DynamicPageParams {
+  refreshDynamics?: boolean;
+  currentTabIndex?: number;
+  needRefresh?: boolean;
+}
+
+/**
  * 动态帖子接口
  */
 interface Post {
@@ -949,6 +958,15 @@ struct Index {
     .backgroundColor('#FFFFFF')
     .borderRadius(10)
     .margin({ bottom: 10 })
+    .onClick(() => {
+      // 导航到帖子详情页
+      router.pushUrl({
+        url: 'pages/PostDetail',
+        params: {
+          postId: post.post_id
+        }
+      });
+    })
   }
   
   // 添加点赞方法
@@ -1116,53 +1134,74 @@ struct Index {
     // 获取用户信息
     this.loadUserInfo();
     
-    // 加载帖子数据
-    this.loadPosts();
+    console.info('[DEBUG] Index页面aboutToAppear');
     
-    // 示例动态数据 - 你可以保留这部分作为备用
-    this.posts = [
-      {
-        id: 1,
-        username: '张三',
-        avatarUrl: '',
-        content: '今天参观了故宫博物院，看到了很多珍贵的文物，特别是青花瓷瓶，真是太美了！',
-        createTime: '2024-03-20 15:30',
-        likes: 12,
-        isLiked: false,
-        images: [],
-        comments: [
-          {
-            username: '李四',
-            content: '我也去过故宫，确实很震撼！'
-          },
-          {
-            username: '王五',
-            content: '推荐去看看故宫的钟表馆，也很精彩！'
-          }
-        ]
-      },
-      {
-        id: 2,
-        username: '李四',
-        avatarUrl: '',
-        content: '分享一张在南京博物院拍的照片，这个金缕玉衣真是太精美了！',
-        createTime: '2024-03-19 10:20',
-        likes: 8,
-        isLiked: false,
-        images: [$r('app.media.cultural_heritage_logo')],
-        comments: [
-          {
-            username: '张三',
-            content: '这个玉衣保存得真好！'
-          }
-        ]
+    // 检查路由参数
+    try {
+      const params = router.getParams() as DynamicPageParams;
+      
+      // 日志记录路由参数
+      console.info('[DEBUG] 路由参数:', JSON.stringify(params));
+      
+      // 判断是否需要切换到动态标签页并刷新
+      const shouldRefresh = params && (params.needRefresh === true || params.refreshDynamics === true);
+      
+      if (params && params.currentTabIndex !== undefined) {
+        // 切换到指定的标签页
+        console.info('[DEBUG] 根据参数切换到标签页:', params.currentTabIndex);
+        this.currentIndex = params.currentTabIndex;
       }
-    ];
-
+      
+      // 如果是动态标签页或需要刷新，则加载最新动态
+      if (this.currentIndex === 3 || shouldRefresh) {
+        console.info('[DEBUG] 刷新动态列表');
+        // 重置页码并加载第一页数据
+        this.currentPage = 1;
+        this.loadPosts(true);
+        
+        // 显示刷新成功的提示（可选）
+        if (shouldRefresh) {
+          prompt.showToast({
+            message: '已刷新最新动态',
+            duration: 1500
+          });
+        }
+      } else {
+        // 无需刷新时正常加载数据
+        console.info('[DEBUG] 无需刷新，正常加载动态数据');
+        this.loadPosts();
+      }
+    } catch (error) {
+      // 处理异常情况
+      console.error('[DEBUG] 处理路由参数出错:', error);
+      // 出错时正常加载数据
+      this.loadPosts();
+    }
+    
     // 加载文物数据
     this.loadArtifacts();
   }
   
+  // 页面显示时触发（从其他页面返回时）
+  onPageShow() {
+    console.info('[DEBUG] Index页面onPageShow');
+    
+    // 如果当前是动态标签页，则刷新列表
+    if (this.currentIndex === 3) {
+      console.info('[DEBUG] 当前是动态标签页，刷新列表');
+      // 重置页码并重新加载
+      this.currentPage = 1;
+      this.loadPosts(true);
+      
+      // 显示提示（可选）
+      prompt.showToast({
+        message: '已刷新最新动态',
+        duration: 1500
+      });
+    }
+  }
+  
+  // 加载用户信息
   private async loadUserInfo() {
     try {
       this.userInfo = await this.userService.getUserInfo();

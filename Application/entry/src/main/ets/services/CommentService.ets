@@ -5,6 +5,7 @@ import preferences from '@ohos.data.preferences';
 import { StorageService } from './StorageService';
 import { CommentData } from '../model/CommentModel';
 import { ApiResponse } from '../model/ApiModel';
+import { Comment } from '../model/PostModel';
 
 /**
  * HTTP响应接口
@@ -75,7 +76,7 @@ export class CommentService {
    * 获取帖子评论列表
    * @param postId 帖子ID
    */
-  static async getCommentsByPostId(postId: string): Promise<CommentData[]> {
+  static async getCommentsByPostId(postId: string): Promise<Comment[]> {
     try {
       const httpRequest = http.createHttp();
       const url = `${Constants.BASE_URL}/posts/${postId}/comments`;
@@ -88,7 +89,7 @@ export class CommentService {
       });
       
       if (response.responseCode === 200) {
-        const responseData = JSON.parse(response.result as string) as CommentData[];
+        const responseData = JSON.parse(response.result as string) as Comment[];
         return responseData || [];
       } else {
         console.error(`获取评论失败: ${response.responseCode}`);
@@ -137,6 +138,43 @@ export class CommentService {
       return {
         code: 500,
         message: `评论发布异常: ${typedError.message}`
+      };
+    }
+  }
+  
+  /**
+   * 删除评论
+   * @param commentId 评论ID
+   */
+  static async deleteComment(commentId: string): Promise<ApiResponse<null>> {
+    try {
+      const httpRequest = http.createHttp();
+      const url = `${Constants.BASE_URL}/comments/${commentId}`;
+      
+      const response = await httpRequest.request(url, {
+        method: http.RequestMethod.DELETE,
+        header: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.responseCode === 200) {
+        return {
+          code: 0,
+          message: '评论删除成功',
+          data: null
+        };
+      } else {
+        return {
+          code: response.responseCode,
+          message: `评论删除失败: ${response.responseCode}`
+        };
+      }
+    } catch (error) {
+      const typedError = error as ErrorWithMessage;
+      return {
+        code: 500,
+        message: `评论删除异常: ${typedError.message}`
       };
     }
   }

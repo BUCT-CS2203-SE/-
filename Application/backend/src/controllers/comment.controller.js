@@ -9,11 +9,12 @@ const { Op } = require("sequelize");
 exports.create = async (req, res) => {
     try {
         console.log('创建评论请求数据:', req.body);
-        
+
         // 验证请求数据
         if (!req.body.post_id || !req.body.content || !req.body.user_id) {
             return res.status(400).json({
-                message: "评论内容和帖子ID不能为空"
+                message: "评论内容和帖子ID不能为空",
+                error: "INVALID_INPUT"
             });
         }
 
@@ -21,7 +22,8 @@ exports.create = async (req, res) => {
         const post = await Post.findByPk(req.body.post_id);
         if (!post) {
             return res.status(404).json({
-                message: `未找到ID为 ${req.body.post_id} 的帖子`
+                message: `未找到ID为 ${req.body.post_id} 的帖子`,
+                error: "POST_NOT_FOUND"
             });
         }
 
@@ -46,9 +48,32 @@ exports.create = async (req, res) => {
         });
     } catch (error) {
         console.error('评论创建失败:', error);
+
+        // 数据库连接错误特殊处理
+        if (error.name === 'SequelizeConnectionError' ||
+            error.name === 'SequelizeConnectionRefusedError' ||
+            error.name === 'SequelizeHostNotFoundError' ||
+            error.name === 'SequelizeHostNotReachableError') {
+            return res.status(503).json({
+                message: "数据库连接失败，请检查网络连接",
+                error: "NETWORK_ERROR",
+                details: error.message
+            });
+        }
+
+        // 数据验证错误
+        if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
+            return res.status(400).json({
+                message: "数据验证失败",
+                error: "VALIDATION_ERROR",
+                details: error.message
+            });
+        }
+
         res.status(500).json({
             message: "评论创建失败",
-            error: error.message
+            error: "SERVER_ERROR",
+            details: error.message
         });
     }
 };
@@ -58,7 +83,7 @@ exports.findAll = async (req, res) => {
     try {
         const { post_id, page = 1, pageSize = 10 } = req.query;
         const offset = (page - 1) * pageSize;
-        
+
         console.log('获取评论列表请求参数:', { post_id, page, pageSize, offset });
 
         // 构建查询条件
@@ -95,9 +120,23 @@ exports.findAll = async (req, res) => {
         });
     } catch (error) {
         console.error('获取评论列表失败:', error);
+
+        // 数据库连接错误特殊处理
+        if (error.name === 'SequelizeConnectionError' ||
+            error.name === 'SequelizeConnectionRefusedError' ||
+            error.name === 'SequelizeHostNotFoundError' ||
+            error.name === 'SequelizeHostNotReachableError') {
+            return res.status(503).json({
+                message: "数据库连接失败，请检查网络连接",
+                error: "NETWORK_ERROR",
+                details: error.message
+            });
+        }
+
         res.status(500).json({
             message: "获取评论列表失败",
-            error: error.message
+            error: "SERVER_ERROR",
+            details: error.message
         });
     }
 };
@@ -108,16 +147,31 @@ exports.findOne = async (req, res) => {
         const comment = await Comment.findByPk(req.params.id);
         if (!comment) {
             return res.status(404).json({
-                message: "未找到该评论"
+                message: "未找到该评论",
+                error: "COMMENT_NOT_FOUND"
             });
         }
 
         res.json(comment);
     } catch (error) {
         console.error('获取评论详情失败:', error);
+
+        // 数据库连接错误特殊处理
+        if (error.name === 'SequelizeConnectionError' ||
+            error.name === 'SequelizeConnectionRefusedError' ||
+            error.name === 'SequelizeHostNotFoundError' ||
+            error.name === 'SequelizeHostNotReachableError') {
+            return res.status(503).json({
+                message: "数据库连接失败，请检查网络连接",
+                error: "NETWORK_ERROR",
+                details: error.message
+            });
+        }
+
         res.status(500).json({
             message: "获取评论详情失败",
-            error: error.message
+            error: "SERVER_ERROR",
+            details: error.message
         });
     }
 };
@@ -128,7 +182,8 @@ exports.update = async (req, res) => {
         const comment = await Comment.findByPk(req.params.id);
         if (!comment) {
             return res.status(404).json({
-                message: "未找到该评论"
+                message: "未找到该评论",
+                error: "COMMENT_NOT_FOUND"
             });
         }
 
@@ -143,9 +198,23 @@ exports.update = async (req, res) => {
         });
     } catch (error) {
         console.error('更新评论失败:', error);
+
+        // 数据库连接错误特殊处理
+        if (error.name === 'SequelizeConnectionError' ||
+            error.name === 'SequelizeConnectionRefusedError' ||
+            error.name === 'SequelizeHostNotFoundError' ||
+            error.name === 'SequelizeHostNotReachableError') {
+            return res.status(503).json({
+                message: "数据库连接失败，请检查网络连接",
+                error: "NETWORK_ERROR",
+                details: error.message
+            });
+        }
+
         res.status(500).json({
             message: "更新评论失败",
-            error: error.message
+            error: "SERVER_ERROR",
+            details: error.message
         });
     }
 };
@@ -156,7 +225,8 @@ exports.delete = async (req, res) => {
         const comment = await Comment.findByPk(req.params.id);
         if (!comment) {
             return res.status(404).json({
-                message: "未找到该评论"
+                message: "未找到该评论",
+                error: "COMMENT_NOT_FOUND"
             });
         }
 
@@ -167,9 +237,23 @@ exports.delete = async (req, res) => {
         });
     } catch (error) {
         console.error('删除评论失败:', error);
+
+        // 数据库连接错误特殊处理
+        if (error.name === 'SequelizeConnectionError' ||
+            error.name === 'SequelizeConnectionRefusedError' ||
+            error.name === 'SequelizeHostNotFoundError' ||
+            error.name === 'SequelizeHostNotReachableError') {
+            return res.status(503).json({
+                message: "数据库连接失败，请检查网络连接",
+                error: "NETWORK_ERROR",
+                details: error.message
+            });
+        }
+
         res.status(500).json({
             message: "删除评论失败",
-            error: error.message
+            error: "SERVER_ERROR",
+            details: error.message
         });
     }
 }; 
