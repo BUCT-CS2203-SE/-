@@ -8,7 +8,7 @@ const comments = require("../controllers/comment.controller.js");
 // 创建评论
 router.post("/", comments.create);
 
-// 获取评论列表
+// 获取所有评论（分页）
 router.get("/", comments.findAll);
 
 // 获取单个评论

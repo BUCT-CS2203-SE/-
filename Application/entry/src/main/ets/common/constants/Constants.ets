@@ -30,7 +30,12 @@ export class Constants {
   /**
    * API基础URL
    */
-  static readonly BASE_URL: string = 'http://localhost:3000/api';
+  // 正式服务器URL（目前不可用 - 503错误）
+  // static readonly BASE_URL: string = 'http://101.43.234.152:3000/api';
+  
+  // 使用备用API地址
+  static readonly BASE_URL: string = 'http://127.0.0.1:3000/api';
+  // static readonly BASE_URL: string = 'http://localhost:3000/api';
   
   /**
    * 首页Tab配置

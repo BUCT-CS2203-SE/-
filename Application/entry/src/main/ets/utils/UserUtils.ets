@@ -16,6 +16,16 @@ export interface UserInfo {
   img_url?: string;
 }
 
+// 开发阶段的模拟用户数据
+const DEV_USER: UserInfo = {
+  user_id: 1001,
+  nickname: '测试用户',
+  gender: 1,
+  phone: '13800138000',
+  email: 'test@example.com',
+  img_url: '/common/images/default_avatar.png'
+};
+
 /**
  * 存储用户信息到首选项存储
  * @param userInfo 用户信息
@@ -36,12 +46,17 @@ export async function saveUserInfo(userInfo: UserInfo): Promise<void> {
  */
 export async function getUserInfo(): Promise<UserInfo | null> {
   try {
-    const preference = await preferences.getPreferences(Constants.getContext(), 'user_info');
-    const userInfo = await preference.get('user_info', '');
-    if (!userInfo) {
-      return null;
-    }
-    return JSON.parse(userInfo as string);
+    // 开发环境直接返回模拟用户数据
+    console.info('[DEBUG] 开发环境返回模拟用户数据');
+    return DEV_USER;
+
+    // 生产环境的代码，目前暂时注释掉
+    // const preference = await preferences.getPreferences(Constants.getContext(), 'user_info');
+    // const userInfo = await preference.get('user_info', '');
+    // if (!userInfo) {
+    //   return null;
+    // }
+    // return JSON.parse(userInfo as string);
   } catch (error) {
     console.error(`获取用户信息失败: ${error.message}`);
     return null;
