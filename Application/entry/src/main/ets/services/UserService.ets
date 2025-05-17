@@ -61,6 +61,8 @@ export interface UserInfo {
   email: string;
   img_url: string;
   gender: number;
+  user_id?: number;
+  id?: string;
 }
 
 /**

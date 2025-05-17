@@ -5,11 +5,9 @@ import { UserService } from '../services/UserService';
 import { Constants, CategoryItem } from '../common/constants/Constants';
 import router from '@ohos.router';
 import { ToastUtil } from '../utils/ToastUtil';
-import { RelicFavoriteService } from '../services/RelicFavoriteService';
 
 interface RouterParams {
   artifactId: string;
-  id?: string;
 }
 
 /**
@@ -47,32 +45,19 @@ struct ArtifactDetail {
   @State isLoading: boolean = true;
   @State errorMsg: string = '';
   @State commentText: string = '';
-  @State isFavorite: boolean = false;
+  @State isLiked: boolean = false;
   @State currentImageIndex: number = 0;
   
   private artifactId: string = '';
   private artifactService: ArtifactService = new ArtifactService();
   private userService: UserService = new UserService();
-  private favoriteService: RelicFavoriteService = new RelicFavoriteService();
-  private userId: string = '';
   
-  async aboutToAppear() {
+  aboutToAppear() {
     const params = router.getParams() as RouterParams;
-    const currentUser = this.userService.getCurrentUser ? await this.userService.getCurrentUser() : null;
-    this.userId = currentUser && currentUser.id ? currentUser.id : '';
     if (params && params.artifactId) {
       this.artifactId = params.artifactId;
       this.loadArtifactDetail();
       this.loadComments();
-      if (this.userId && this.artifactId) {
-        this.favoriteService.isFavorite(this.userId, this.artifactId)
-          .then((isFav) => {
-            this.isFavorite = isFav;
-          })
-          .catch(() => {
-            this.isFavorite = false;
-          });
-      }
     } else {
       this.errorMsg = '无效的文物ID';
       this.isLoading = false;
@@ -93,11 +78,11 @@ struct ArtifactDetail {
         // 判断是否为默认数据
       if (this.artifactId !== this.artifact.id) {
         console.warn(`加载了默认数据，请求ID: ${this.artifactId}, 返回ID: ${this.artifact.id}`);
-          this.errorMsg = '无法从数据库获取文物详情，显示的是默认数据';
+          this.errorMsg = '无法从数据库获取文物详情，显示的是默认数据。请检查后端服务是否正常运行，并确保能连接到云数据库。';
         }
     } catch (error) {
       console.error(`加载文物详情失败: ${error.message}`);
-      this.errorMsg = `加载文物详情失败: ${error.message}`;
+      this.errorMsg = `加载文物详情失败: ${error.message}。请确保后端服务运行在localhost:3000并能连接到云数据库。`;
     } finally {
         this.isLoading = false;
     }
@@ -166,32 +151,16 @@ struct ArtifactDetail {
       });
   }
   
-  toggleFavorite() {
-    if (!this.userId || !this.artifactId) {
-      ToastUtil.show('请先登录', 3000);
-      return;
-    }
-    if (this.isFavorite) {
-      this.favoriteService.removeFavorite(this.userId, this.artifactId)
-        .then(() => {
-          this.isFavorite = false;
-          ToastUtil.show('已取消收藏', 3000);
-        })
-        .catch((error: Error) => {
-          ToastUtil.show('取消收藏失败', 3000);
-          console.error('取消收藏失败', error.message);
-        });
+  toggleLike() {
+    this.isLiked = !this.isLiked;
+    if (this.isLiked) {
+      this.artifact.likes++;
+      ToastUtil.show('点赞成功');
     } else {
-      this.favoriteService.addFavorite(this.userId, this.artifactId)
-        .then(() => {
-          this.isFavorite = true;
-          ToastUtil.show('收藏成功', 3000);
-        })
-        .catch((error: Error) => {
-          ToastUtil.show('收藏失败', 3000);
-          console.error('收藏失败', error.message);
-        });
+      this.artifact.likes--;
+      ToastUtil.show('取消点赞');
     }
+    // 实际项目中这里应该调用API
   }
   
   build() {
@@ -287,11 +256,16 @@ struct ArtifactDetail {
                   .layoutWeight(1)
                 
                 Row() {
-                  Image(this.isFavorite ? $r('app.media.liked') : $r('app.media.like'))
+                  Image(this.isLiked ? $r('app.media.liked') : $r('app.media.like'))
                     .width(24)
                     .height(24)
                     .margin({ right: 5 })
-                    .onClick(() => this.toggleFavorite())
+                    .onClick(() => this.toggleLike())
+                    
+                  Text(`${this.artifact.likes}`)
+                    .fontSize(14)
+                    .fontColor('#666666')
+                    .margin({ right: 16 })
                 }
               }
               .width('100%')

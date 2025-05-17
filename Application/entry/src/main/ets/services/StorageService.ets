@@ -21,7 +21,7 @@ export class StorageService {
   private static readonly PREFERENCES_NAME = 'app_preferences';
 
   private getContext(): common.UIAbilityContext {
-    const context = getContext(this) as common.UIAbilityContext;
+    const context = getContext() as common.UIAbilityContext;
     if (!context) {
       throw new StorageServiceError('无法获取应用上下文');
     }

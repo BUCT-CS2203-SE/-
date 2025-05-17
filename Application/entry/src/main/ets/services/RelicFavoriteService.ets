@@ -53,8 +53,9 @@ export class RelicFavoriteService {
   // 判断用户是否收藏了某个文物
   async isFavorite(userId: string, artifactId: string): Promise<boolean> {
     try {
-      const response = await this.apiService.isFavorite(userId, artifactId);
-      return response;
+      // 由于ApiService中没有isFavorite方法，我们通过获取用户收藏列表然后检查是否包含指定文物ID来实现
+      const favorites = await this.getUserFavorites(userId);
+      return favorites.some(favorite => favorite.id === parseInt(artifactId));
     } catch (error) {
       console.error('查询收藏状态失败:', error);
       return false;
