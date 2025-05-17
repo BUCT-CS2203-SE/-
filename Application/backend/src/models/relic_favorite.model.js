@@ -49,7 +49,7 @@ module.exports = (sequelize, Sequelize) => {
             foreignKey: 'relic_id',
             as: 'relic'
         });
-        
+
         // 与用户信息表的关联
         RelicFavorite.belongsTo(models.User, {
             foreignKey: 'user_id',

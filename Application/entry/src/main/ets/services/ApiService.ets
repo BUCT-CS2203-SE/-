@@ -6,15 +6,7 @@ import { Artifact } from '../model/ArtifactModel';
 import { User, UserRelicComment, RelicInfo } from '../model/UserModel';
 import { BrowseItem, BrowseRequestData, BrowseResponse, BrowseItemJson } from '../model/BrowseModel';
 import preferences from '@ohos.data.preferences';
-
-/**
- * API响应数据结构
- */
-interface ApiResponse<T> {
-  code?: number;
-  message?: string;
-  data?: T;
-}
+import { ApiResponse } from '../model/ApiModel';
 
 /**
  * API错误类
@@ -333,6 +325,13 @@ interface RelicCommentResponse {
 }
 
 /**
+ * 收藏状态响应接口
+ */
+interface IsFavoriteResponse {
+  isFavorite: boolean;
+}
+
+/**
  * 收藏文物数据接口
  */
 interface FavoriteRelicData {
@@ -366,18 +365,15 @@ interface FavoriteResponse {
 }
 
 /**
- * 收藏状态响应接口
- */
-interface IsFavoriteResponse {
-  isFavorite: boolean;
-}
-
-/**
  * API服务类
  */
 export class ApiService {
   private readonly BASE_URL: string = 'http://localhost:3000/api';
   private readonly TIMEOUT: number = 10000;
+  
+  constructor() {
+    console.info(`API服务初始化，BASE_URL: ${this.BASE_URL}`);
+  }
   
   /**
    * 发送HTTP请求
@@ -769,11 +765,6 @@ export class ApiService {
    */
   async addFavorite(userId: string, artifactId: string): Promise<void> {
     try {
-      // 创建请求数据
-      const favoriteData = new RequestData();
-      favoriteData.setUserId(userId);
-      favoriteData.setArtifactId(artifactId);
-      
       await this.sendRequest<GenericResponse>(
         `${this.BASE_URL}/relic-favorites`,
         this.createRequestOptions(
@@ -789,7 +780,8 @@ export class ApiService {
       throw new ApiError(error instanceof Error ? error.message : String(error));
     }
   }
-  
+
+
   /**
    * 取消收藏
    * @param userId 用户ID
@@ -806,7 +798,7 @@ export class ApiService {
       throw new ApiError(error instanceof Error ? error.message : String(error));
     }
   }
-  
+
   /**
    * 获取用户收藏
    * @param userId 用户ID
@@ -817,7 +809,7 @@ export class ApiService {
         `${this.BASE_URL}/relic-favorites/user/${userId}`,
         this.createRequestOptions(http.RequestMethod.GET)
       );
-      
+
       // 将API返回的数据转换为Artifact对象数组
       return response.map(item => {
         const relic = item.relic;
@@ -830,7 +822,7 @@ export class ApiService {
           relic.description,
           imageUrl, // 使用photos数组中的第一张图片URL
           relic.type,
-        '', // detailUrl
+          '', // detailUrl
           0, // likes
           0, // comments
           relic.photos?.map(photo => photo.photo_url) || [] // 所有图片URL
@@ -841,7 +833,6 @@ export class ApiService {
       throw new ApiError('获取用户收藏失败', error.statusCode || 500);
     }
   }
-
   /**
    * 删除评论
    * @param commentId 评论ID

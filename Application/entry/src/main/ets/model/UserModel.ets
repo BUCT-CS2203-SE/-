@@ -122,6 +122,19 @@ export class UserRelicComment {
 export type CommentData = UserRelicComment;
 
 /**
+ * 用户评论接口
+ */
+export interface UserComment {
+  id: string;
+  artifactId: string;
+  userId: string;
+  username: string;
+  content: string;
+  timestamp: number;
+  avatarUrl?: string;
+}
+
+/**
  * 评论接口
  */
 export interface Comment {

@@ -308,7 +308,7 @@ exports.getFavorites = async (req, res) => {
                 model: Artifact,
                 as: 'relic'
             }],
-            order: [['fav_id', 'DESC']]
+            order: [['favorite_id', 'DESC']]
         });
 
         if (!favorites) {

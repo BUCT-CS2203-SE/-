@@ -93,11 +93,11 @@ struct ArtifactDetail {
         // 判断是否为默认数据
       if (this.artifactId !== this.artifact.id) {
         console.warn(`加载了默认数据，请求ID: ${this.artifactId}, 返回ID: ${this.artifact.id}`);
-          this.errorMsg = '无法从数据库获取文物详情，显示的是默认数据';
+          this.errorMsg = '无法从数据库获取文物详情，显示的是默认数据。请检查后端服务是否正常运行，并确保能连接到云数据库。';
         }
     } catch (error) {
       console.error(`加载文物详情失败: ${error.message}`);
-      this.errorMsg = `加载文物详情失败: ${error.message}`;
+      this.errorMsg = `加载文物详情失败: ${error.message}。请确保后端服务运行在localhost:3000并能连接到云数据库。`;
     } finally {
         this.isLoading = false;
     }
