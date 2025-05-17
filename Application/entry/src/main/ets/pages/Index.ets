@@ -3,6 +3,7 @@ import router from '@ohos.router';
 import { CategoryItem } from '../common/constants/Constants';
 import { Artifact } from '../model/ArtifactModel';
 import { ArtifactService } from '../services/ArtifactService';
+import { Banner, Category } from '../services/ArtifactService';
 import prompt from '@ohos.prompt';
 import picker from '@ohos.file.picker';
 import { UserService } from '../services/UserService';
@@ -103,6 +104,10 @@ struct Index {
   @State currentPage: number = 1;
   @State pageSize: number = 10;
   @State hasMoreData: boolean = true;
+  @State banners: Banner[] = []; // 轮播图数据
+  @State isLoadingBanners: boolean = false; // 轮播图加载状态
+  @State categories: Category[] = []; // 分类数据
+  @State isLoadingCategories: boolean = false; // 分类加载状态
   
   private artifactService: ArtifactService = new ArtifactService();
   private userService: UserService = new UserService();
@@ -183,41 +188,163 @@ struct Index {
           .margin({ top: 20, bottom: 20 })
         
         // 轮播图
-        Swiper() {
-          // 这里可以添加实际的轮播图内容
-          Text('轮播图1').width('100%').height(200).backgroundColor('#66CCFF')
-          Text('轮播图2').width('100%').height(200).backgroundColor('#6699FF')
-          Text('轮播图3').width('100%').height(200).backgroundColor('#66CCCC')
+        if (this.isLoadingBanners) {
+          Column() {
+            LoadingProgress()
+              .width(50)
+              .height(50)
+              .color('#1698CE')
+            Text('加载中...')
+              .fontSize(16)
+              .margin({ top: 10 })
+          }
+          .width('90%')
+          .height(200)
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor('#F5F5F5')
+          .borderRadius(10)
+        } else if (this.banners.length > 0) {
+          Swiper() {
+            ForEach(this.banners, (banner: Banner) => {
+              Stack() {
+                Image(banner.imageUrl)
+                  .width('100%')
+                  .height(200)
+                  .objectFit(ImageFit.Cover)
+                
+                Column() {
+                  Text(banner.title)
+                    .fontSize(18)
+                    .fontWeight(FontWeight.Bold)
+                    .fontColor('#FFFFFF')
+                    .backgroundColor('#00000080')
+                    .padding(8)
+                    .borderRadius(4)
+                }
+                .width('100%')
+                .height('100%')
+                .justifyContent(FlexAlign.End)
+                .alignItems(HorizontalAlign.Start)
+                .padding(16)
+              }
+              .width('100%')
+              .height('100%')
+              .onClick(() => {
+                if (banner.linkType === 0) { // 文物详情
+                  router.pushUrl({
+                    url: 'pages/ArtifactDetail',
+                    params: { artifactId: banner.linkId }
+                  });
+                } else if (banner.linkType === 1) { // 外部链接
+                  // 处理外部链接，可以打开浏览器等
+                  prompt.showToast({ message: `打开外部链接: ${banner.linkId}` });
+                }
+              })
+            })
+          }
+          .autoPlay(true)
+          .interval(3000)
+          .width('90%')
+          .height(200)
+          .borderRadius(10)
+          .indicator(true) // 显示指示器
+          .loop(true) // 循环播放
+          .duration(300) // 动画时长
+          .margin({ bottom: 20 })
+          .displayCount(1) // 一次显示一张图片
+        } else {
+          // 无轮播图数据
+          Column() {
+            Text('暂无轮播图数据')
+              .fontSize(16)
+              .fontColor('#999999')
+          }
+          .width('90%')
+          .height(200)
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor('#F5F5F5')
+          .borderRadius(10)
+          .margin({ bottom: 20 })
         }
-        .autoPlay(true)
-        .interval(3000)
-        .width('90%')
-        .height(200)
-        .borderRadius(10)
-        .margin({ bottom: 20 })
         
         // 分类区域
         Text('文物分类').fontSize(20).fontWeight(FontWeight.Bold).alignSelf(ItemAlign.Start).margin({ left: 16, top: 10, bottom: 10 })
-        Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceAround }) {
-          ForEach(Constants.ARTIFACT_CATEGORIES, (category: CategoryItem) => {
-            Column() {
-              // 这里应加入实际的图标
-              Image($r('app.media.icon'))
-                .width(50)
-                .height(50)
-                .margin({ bottom: 5 })
-              Text(category.name)
-                .fontSize(14)
-            }
-            .width('30%')
-            .aspectRatio(1)
-            .margin(5)
-            .borderRadius(8)
-            .backgroundColor('#F5F5F5')
-            .justifyContent(FlexAlign.Center)
-          })
+        
+        if (this.isLoadingCategories) {
+          Column() {
+            LoadingProgress()
+              .width(50)
+              .height(50)
+              .color('#1698CE')
+            Text('加载中...')
+              .fontSize(16)
+              .margin({ top: 10 })
+          }
+          .width('90%')
+          .height(100)
+          .justifyContent(FlexAlign.Center)
+        } else if (this.categories.length > 0) {
+          Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceAround }) {
+            ForEach(this.categories, (category: Category) => {
+              Column() {
+                // 使用统一图标，不同颜色区分
+                Image($r('app.media.icon'))
+                  .width(50)
+                  .height(50)
+                  .margin({ bottom: 5 })
+                  .fillColor(this.getCategoryColor(category.id))
+                Text(category.name)
+                  .fontSize(14)
+              }
+              .width('30%')
+              .aspectRatio(1)
+              .margin(5)
+              .borderRadius(8)
+              .backgroundColor('#F5F5F5')
+              .justifyContent(FlexAlign.Center)
+              .onClick(() => {
+                // 只显示提示信息，暂不实现跳转
+                prompt.showToast({ 
+                  message: `选择分类：${category.name}` 
+                });
+                
+                console.info(`点击了分类: ${category.name}, ID: ${category.id}`);
+              })
+            })
+          }
+          .padding(10)
+        } else {
+          // 使用Constants中定义的分类
+          Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceAround }) {
+            ForEach(Constants.ARTIFACT_CATEGORIES, (category: CategoryItem) => {
+              Column() {
+                // 使用统一图标，不同颜色区分
+                Image($r('app.media.icon'))
+                  .width(50)
+                  .height(50)
+                  .margin({ bottom: 5 })
+                  .fillColor(this.getCategoryColor(category.id))
+                Text(category.name)
+                  .fontSize(14)
+              }
+              .width('30%')
+              .aspectRatio(1)
+              .margin(5)
+              .borderRadius(8)
+              .backgroundColor('#F5F5F5')
+              .justifyContent(FlexAlign.Center)
+              .onClick(() => {
+                // 只显示提示信息，暂不实现跳转
+                prompt.showToast({ 
+                  message: `选择分类：${category.name}` 
+                });
+                
+                console.info(`点击了分类: ${category.name}, ID: ${category.id}`);
+              })
+            })
+          }
+          .padding(10)
         }
-        .padding(10)
         
         // 推荐文物
         Text('推荐文物').fontSize(20).fontWeight(FontWeight.Bold).alignSelf(ItemAlign.Start).margin({ left: 16, top: 16, bottom: 10 })
@@ -242,6 +369,12 @@ struct Index {
             .padding(10)
             .backgroundColor('#FFFFFF')
             .borderRadius(8)
+            .onClick(() => {
+              router.pushUrl({
+                url: 'pages/ArtifactDetail',
+                params: { artifactId: '1' }  // 假设ID为1
+              });
+            })
           }
           
           ListItem() {
@@ -263,6 +396,12 @@ struct Index {
             .padding(10)
             .backgroundColor('#FFFFFF')
             .borderRadius(8)
+            .onClick(() => {
+              router.pushUrl({
+                url: 'pages/ArtifactDetail',
+                params: { artifactId: '2' }  // 假设ID为2
+              });
+            })
           }
         }
         .width('90%')
@@ -1180,6 +1319,12 @@ struct Index {
     
     // 加载文物数据
     this.loadArtifacts();
+    
+    // 加载轮播图数据
+    this.loadBanners();
+    
+    // 加载分类数据
+    this.loadCategories();
   }
   
   // 页面显示时触发（从其他页面返回时）
@@ -1322,5 +1467,39 @@ struct Index {
     .height('100%')
     .backgroundColor('#F0F0F0')
     .padding({ bottom: 56 })
+  }
+
+  // 加载轮播图数据
+  private async loadBanners() {
+    this.isLoadingBanners = true;
+    try {
+      this.banners = await this.artifactService.getBanners();
+    } catch (error) {
+      console.error('加载轮播图失败:', error);
+    } finally {
+      this.isLoadingBanners = false;
+    }
+  }
+  
+  // 加载分类数据
+  private async loadCategories() {
+    this.isLoadingCategories = true;
+    try {
+      this.categories = await this.artifactService.getCategories();
+    } catch (error) {
+      console.error('加载分类数据失败:', error);
+    } finally {
+      this.isLoadingCategories = false;
+    }
+  }
+
+  /**
+   * 根据分类ID获取对应的颜色
+   * @param categoryId 分类ID
+   * @returns 分类对应的颜色
+   */
+  private getCategoryColor(categoryId: number): string {
+    const colors = ['#1698CE', '#FF6B3B', '#FFC107', '#41B883', '#8E44AD', '#F44336', '#009688', '#795548'];
+    return colors[categoryId % colors.length];
   }
 }

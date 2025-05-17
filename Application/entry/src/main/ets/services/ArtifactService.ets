@@ -13,6 +13,25 @@ class ArtifactServiceError extends Error {
 }
 
 /**
+ * 轮播图数据接口
+ */
+export interface Banner {
+  id: number;
+  title: string;
+  imageUrl: string;
+  linkType: number;
+  linkId: string;
+}
+
+/**
+ * 分类数据接口
+ */
+export interface Category {
+  id: number;
+  name: string;
+}
+
+/**
  * 文物服务类，用于处理文物相关的业务逻辑
  */
 export class ArtifactService {
@@ -80,6 +99,40 @@ export class ArtifactService {
       410,
       93
     )
+  ];
+  
+  // 模拟轮播图数据
+  private mockBanners: Banner[] = [
+    {
+      id: 1,
+      title: '清明上河图',
+      imageUrl: 'https://www.chinavid.com/wp-content/uploads/2020/02/29/qing-ming-shang-he-tu-gao-qing-tu-185gb-7-686x640.jpg',
+      linkType: 0,
+      linkId: '1'
+    },
+    {
+      id: 2,
+      title: '商后母戊鼎',
+      imageUrl: 'https://img2.baidu.com/it/u=3256878326,2145691044&fm=253&fmt=auto&app=138&f=JPEG?w=475&h=591',
+      linkType: 0,
+      linkId: '2'
+    },
+    {
+      id: 3,
+      title: '玉龙',
+      imageUrl: 'https://img2.baidu.com/it/u=917862778,2071639640&fm=253&fmt=auto?w=800&h=975',
+      linkType: 0,
+      linkId: '3'
+    }
+  ];
+  
+  // 模拟分类数据
+  private mockCategories: Category[] = [
+    { id: 0, name: '青铜器' },
+    { id: 1, name: '陶瓷器' },
+    { id: 2, name: '玉器' },
+    { id: 3, name: '书画' },
+    { id: 6, name: '雕塑' }
   ];
   
   constructor() {
@@ -200,6 +253,69 @@ export class ArtifactService {
       );
       
       return [mockComment];
+    }
+  }
+
+  /**
+   * 获取轮播图数据
+   */
+  async getBanners(): Promise<Banner[]> {
+    try {
+      console.info('开始获取轮播图数据');
+      
+      // 调用API服务获取轮播图数据
+      const bannerDataList = await this.apiService.getBanners();
+      
+      // 转换API返回的数据为Banner对象
+      const banners = bannerDataList.map(item => {
+        const banner: Banner = {
+          id: item.banner_id,
+          title: item.title,
+          imageUrl: item.image_url,
+          linkType: item.link_type,
+          linkId: item.link_id
+        };
+        return banner;
+      });
+      
+      console.info(`成功获取轮播图数据，数量: ${banners.length}`);
+      return banners;
+    } catch (err) {
+      console.error('获取轮播图数据失败:', err instanceof Error ? err.message : String(err));
+      
+      // 返回模拟数据作为兜底方案
+      console.info('使用模拟数据（轮播图）');
+      return this.mockBanners;
+    }
+  }
+  
+  /**
+   * 获取文物分类数据
+   */
+  async getCategories(): Promise<Category[]> {
+    try {
+      console.info('开始获取文物分类数据');
+      
+      // 调用API服务获取分类数据
+      const categoryDataList = await this.apiService.getCategories();
+      
+      // 转换API返回的数据为Category对象
+      const categories = categoryDataList.map(item => {
+        const category: Category = {
+          id: item.category_id,
+          name: item.category_name
+        };
+        return category;
+      });
+      
+      console.info(`成功获取文物分类数据，数量: ${categories.length}`);
+      return categories;
+    } catch (err) {
+      console.error('获取文物分类数据失败:', err instanceof Error ? err.message : String(err));
+      
+      // 返回模拟数据作为兜底方案
+      console.info('使用模拟数据（文物分类）');
+      return this.mockCategories;
     }
   }
 } 

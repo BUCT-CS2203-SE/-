@@ -51,11 +51,11 @@ export class Constants {
    * 文物分类
    */
   static readonly ARTIFACT_CATEGORIES: CategoryItem[] = [
+    { id: 0, name: '青铜器' },
     { id: 1, name: '陶瓷器' },
     { id: 2, name: '玉器' },
-    { id: 3, name: '青铜器' },
-    { id: 4, name: '书画' },
-    { id: 5, name: '雕塑' }
+    { id: 3, name: '书画' },
+    { id: 6, name: '雕塑' }
   ];
 
   /**

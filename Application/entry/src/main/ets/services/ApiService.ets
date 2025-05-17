@@ -365,6 +365,43 @@ interface FavoriteResponse {
 }
 
 /**
+ * 轮播图数据接口
+ */
+interface BannerData {
+  banner_id: number;
+  title: string;
+  image_url: string;
+  link_type: number;
+  link_id: string;
+  sort_order: number;
+  status: number;
+}
+
+/**
+ * 分类数据接口
+ */
+interface CategoryData {
+  category_id: number;
+  category_name: string;
+  sort_order: number;
+  status: number;
+}
+
+/**
+ * 轮播图响应接口
+ */
+interface BannerResponse {
+  data: BannerData[];
+}
+
+/**
+ * 分类响应接口
+ */
+interface CategoryResponse {
+  data: CategoryData[];
+}
+
+/**
  * API服务类
  */
 export class ApiService {
@@ -961,6 +998,40 @@ export class ApiService {
       );
     } catch (error) {
       console.error('删除浏览记录失败:', error);
+      throw new ApiError(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  /**
+   * 获取轮播图数据
+   */
+  async getBanners(): Promise<BannerData[]> {
+    try {
+      const response = await this.sendRequest<BannerResponse>(
+        `${this.BASE_URL}/banners`,
+        this.createRequestOptions(http.RequestMethod.GET)
+      );
+      
+      return response.data || [];
+    } catch (error) {
+      console.error('获取轮播图数据失败:', error);
+      throw new ApiError(error instanceof Error ? error.message : String(error));
+    }
+  }
+  
+  /**
+   * 获取文物分类数据
+   */
+  async getCategories(): Promise<CategoryData[]> {
+    try {
+      const response = await this.sendRequest<CategoryResponse>(
+        `${this.BASE_URL}/categories`,
+        this.createRequestOptions(http.RequestMethod.GET)
+      );
+      
+      return response.data || [];
+    } catch (error) {
+      console.error('获取文物分类数据失败:', error);
       throw new ApiError(error instanceof Error ? error.message : String(error));
     }
   }
