@@ -110,6 +110,8 @@ export class UserService {
         // 同时保存userId到单独的键
         const prefs = await preferences.getPreferences(getContext(this), UserService.PREFERENCES_NAME);
         await prefs.put('userId', response.user.id);
+        // 设置登录状态
+        await prefs.put(UserService.LOGIN_STATE_KEY, true);
         await prefs.flush();
         console.info('用户信息保存成功');
       } catch (saveError) {
@@ -221,38 +223,47 @@ export class UserService {
   /**
    * 用户登出
    */
-  async logout(): Promise<boolean> {
+  async logout(): Promise<void> {
     try {
       const context = getContext(this);
-      // 获取首选项
       const prefs = await preferences.getPreferences(context, UserService.PREFERENCES_NAME);
       // 清除用户信息
       await prefs.delete(UserService.USER_KEY);
-      // 清除userId
-      await prefs.delete('userId');
-      // 更新登录状态
-      await prefs.put(UserService.LOGIN_STATE_KEY, false);
-      // 提交更改
+      // 清除登录状态
+      await prefs.delete(UserService.LOGIN_STATE_KEY);
       await prefs.flush();
-      return true;
-    } catch (err) {
-      console.error(`登出失败: ${(err as ErrorWithMessage).message}`);
-      return false;
+      console.info('退出登录成功');
+    } catch (error) {
+      console.error('退出登录失败:', error);
+      throw new UserServiceError(error instanceof Error ? error.message : String(error));
     }
   }
   
   /**
-   * 检查登录状态
+   * 检查用户是否已登录
    */
   async isLoggedIn(): Promise<boolean> {
     try {
       const context = getContext(this);
-      // 获取首选项
       const prefs = await preferences.getPreferences(context, UserService.PREFERENCES_NAME);
-      // 获取登录状态
-      return await prefs.get(UserService.LOGIN_STATE_KEY, false) as boolean;
-    } catch (err) {
-      console.error(`检查登录状态失败: ${(err as ErrorWithMessage).message}`);
+      // 检查登录状态
+      const loginState = await prefs.get(UserService.LOGIN_STATE_KEY, false);
+      if (!loginState) {
+        console.info('用户未登录：登录状态为false');
+        return false;
+      }
+      
+      // 检查用户信息
+      const currentUser = await this.getCurrentUser();
+      if (!currentUser) {
+        console.info('用户未登录：未找到用户信息');
+        return false;
+      }
+      
+      console.info('用户已登录：', JSON.stringify(currentUser));
+      return true;
+    } catch (error) {
+      console.error('检查登录状态失败:', error);
       return false;
     }
   }

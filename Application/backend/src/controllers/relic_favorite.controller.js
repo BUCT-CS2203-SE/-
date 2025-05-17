@@ -76,7 +76,7 @@ exports.getFavorites = async (req, res) => {
                 model: User,
                 as: 'favoriteUser'
             }],
-            order: [['favorite_id', 'DESC']]
+            order: [['fav_id', 'DESC']]
         });
 
         res.send(favorites);
@@ -96,12 +96,29 @@ exports.getUserFavorites = async (req, res) => {
             where: { user_id: userId },
             include: [{
                 model: Artifact,
-                as: 'relic'
+                as: 'relic',
+                include: [{
+                    model: db.ArtifactPhoto,
+                    as: 'photos',
+                    limit: 1, // 只获取第一张图片
+                    order: [['photo_id', 'ASC']] // 按photo_id升序排序
+                }]
             }],
-            order: [['favorite_id', 'DESC']]
+            order: [['fav_id', 'DESC']]
         });
 
-        res.send(favorites);
+        // 转换响应数据格式，只保留photos数组中的图片URL
+        const formattedFavorites = favorites.map(fav => ({
+            fav_id: fav.fav_id,
+            user_id: fav.user_id,
+            relic_id: fav.relic_id,
+            relic: {
+                ...fav.relic.toJSON(),
+                photos: fav.relic.photos || [] // 保留photos数组
+            }
+        }));
+
+        res.send(formattedFavorites);
     } catch (err) {
         res.status(500).send({
             message: err.message || "获取用户收藏时发生错误。"
@@ -133,6 +150,24 @@ exports.delete = async (req, res) => {
     } catch (err) {
         res.status(500).send({
             message: err.message || "取消收藏时发生错误。"
+        });
+    }
+};
+
+// 判断用户是否收藏了某个文物
+exports.isFavorite = async (req, res) => {
+    try {
+        const { userId, relicId } = req.params;
+        const favorite = await RelicFavorite.findOne({
+            where: {
+                user_id: userId,
+                relic_id: parseInt(relicId)
+            }
+        });
+        res.send({ isFavorite: !!favorite });
+    } catch (err) {
+        res.status(500).send({
+            message: err.message || "查询收藏状态时发生错误。"
         });
     }
 }; 

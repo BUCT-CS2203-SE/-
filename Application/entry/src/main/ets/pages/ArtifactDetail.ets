@@ -5,9 +5,11 @@ import { UserService } from '../services/UserService';
 import { Constants, CategoryItem } from '../common/constants/Constants';
 import router from '@ohos.router';
 import { ToastUtil } from '../utils/ToastUtil';
+import { RelicFavoriteService } from '../services/RelicFavoriteService';
 
 interface RouterParams {
   artifactId: string;
+  id?: string;
 }
 
 /**
@@ -45,19 +47,32 @@ struct ArtifactDetail {
   @State isLoading: boolean = true;
   @State errorMsg: string = '';
   @State commentText: string = '';
-  @State isLiked: boolean = false;
+  @State isFavorite: boolean = false;
   @State currentImageIndex: number = 0;
   
   private artifactId: string = '';
   private artifactService: ArtifactService = new ArtifactService();
   private userService: UserService = new UserService();
+  private favoriteService: RelicFavoriteService = new RelicFavoriteService();
+  private userId: string = '';
   
-  aboutToAppear() {
+  async aboutToAppear() {
     const params = router.getParams() as RouterParams;
+    const currentUser = this.userService.getCurrentUser ? await this.userService.getCurrentUser() : null;
+    this.userId = currentUser && currentUser.id ? currentUser.id : '';
     if (params && params.artifactId) {
       this.artifactId = params.artifactId;
       this.loadArtifactDetail();
       this.loadComments();
+      if (this.userId && this.artifactId) {
+        this.favoriteService.isFavorite(this.userId, this.artifactId)
+          .then((isFav) => {
+            this.isFavorite = isFav;
+          })
+          .catch(() => {
+            this.isFavorite = false;
+          });
+      }
     } else {
       this.errorMsg = '无效的文物ID';
       this.isLoading = false;
@@ -151,16 +166,32 @@ struct ArtifactDetail {
       });
   }
   
-  toggleLike() {
-    this.isLiked = !this.isLiked;
-    if (this.isLiked) {
-      this.artifact.likes++;
-      ToastUtil.show('点赞成功');
-    } else {
-      this.artifact.likes--;
-      ToastUtil.show('取消点赞');
+  toggleFavorite() {
+    if (!this.userId || !this.artifactId) {
+      ToastUtil.show('请先登录', 3000);
+      return;
     }
-    // 实际项目中这里应该调用API
+    if (this.isFavorite) {
+      this.favoriteService.removeFavorite(this.userId, this.artifactId)
+        .then(() => {
+          this.isFavorite = false;
+          ToastUtil.show('已取消收藏', 3000);
+        })
+        .catch((error: Error) => {
+          ToastUtil.show('取消收藏失败', 3000);
+          console.error('取消收藏失败', error.message);
+        });
+    } else {
+      this.favoriteService.addFavorite(this.userId, this.artifactId)
+        .then(() => {
+          this.isFavorite = true;
+          ToastUtil.show('收藏成功', 3000);
+        })
+        .catch((error: Error) => {
+          ToastUtil.show('收藏失败', 3000);
+          console.error('收藏失败', error.message);
+        });
+    }
   }
   
   build() {
@@ -256,16 +287,11 @@ struct ArtifactDetail {
                   .layoutWeight(1)
                 
                 Row() {
-                  Image(this.isLiked ? $r('app.media.liked') : $r('app.media.like'))
+                  Image(this.isFavorite ? $r('app.media.liked') : $r('app.media.like'))
                     .width(24)
                     .height(24)
                     .margin({ right: 5 })
-                    .onClick(() => this.toggleLike())
-                    
-                  Text(`${this.artifact.likes}`)
-                    .fontSize(14)
-                    .fontColor('#666666')
-                    .margin({ right: 16 })
+                    .onClick(() => this.toggleFavorite())
                 }
               }
               .width('100%')

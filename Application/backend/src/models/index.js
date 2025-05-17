@@ -29,6 +29,7 @@ db.ArtifactPhoto = artifactModels.ArtifactPhoto;
 db.User = require('./user.model.js')(sequelize, Sequelize);
 db.RelicComment = require('./relic_comment.model.js')(sequelize, Sequelize);
 db.RelicFavorite = require('./relic_favorite.model.js')(sequelize, Sequelize);
+db.UserBrowse = require('./user_browse.model.js')(sequelize, Sequelize);
 db.Post = require('./Post.js')(sequelize, Sequelize);
 db.Comment = require('./comment.model.js')(sequelize, Sequelize);
 

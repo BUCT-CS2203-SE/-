@@ -35,10 +35,11 @@ app.get("/", (req, res) => {
 });
 
 // 导入路由
-const userRoutes = require('./routes/user.routes');
-const artifactRoutes = require('./routes/artifact.routes');
-const relicCommentRoutes = require('./routes/relic_comment.routes');
-const relicFavoriteRoutes = require('./routes/relic_favorite.routes');
+const userRoutes = require("./routes/user.routes");
+const artifactRoutes = require("./routes/artifact.routes");
+const relicCommentRoutes = require("./routes/relic_comment.routes");
+const relicFavoriteRoutes = require("./routes/relic_favorite.routes");
+const userBrowseRoutes = require("./routes/user_browse.routes");
 const postRoutes = require('./routes/post.routes');
 const commentRoutes = require('./routes/comment.routes');
 
@@ -47,6 +48,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/artifacts', artifactRoutes);
 app.use('/api/relic-comments', relicCommentRoutes);
 app.use('/api/relic-favorites', relicFavoriteRoutes);
+app.use('/api/browse', userBrowseRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRoutes);
 
