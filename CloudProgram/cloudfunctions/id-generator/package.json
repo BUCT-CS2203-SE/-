@@ -1,12 +1,19 @@
 {
   "name": "id-generator",
   "version": "1.0.0",
-  "description": "",
+  "description": "ID生成器云函数",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
   },
   "author": "",
   "license": "ISC",
-  "dependencies": {
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^18.11.11",
+    "typescript": "^5.4.2"
+  },
+  "publishConfig": {
+    "registry": "https://repo.huaweicloud.com/repository/npm/"
   }
 }

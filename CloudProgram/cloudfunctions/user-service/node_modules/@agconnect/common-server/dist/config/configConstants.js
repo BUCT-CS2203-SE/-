@@ -1,0 +1,1 @@
+"use strict";Object.defineProperty(exports,"__esModule",{value:!0}),exports.ConfigConstants=void 0;var ConfigConstants=function(){function n(){}return n.POLLING_INTERVAL=3e5,n.POLLING_EVENT={START:"POLLING_START_EVENT",STOP:"POLLING_STOP_EVENT"},n}();exports.ConfigConstants=ConfigConstants;

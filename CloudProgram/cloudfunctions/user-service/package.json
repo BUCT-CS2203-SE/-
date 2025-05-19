@@ -1,0 +1,22 @@
+{
+    "name": "user-service",
+    "version": "1.0.0",
+    "description": "用户服务云函数",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "build": "tsc"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "@agconnect/database-server": "^1.0.7",
+        "@agconnect/auth-server": "^1.0.0"
+    },
+    "devDependencies": {
+        "@types/node": "^18.11.11",
+        "typescript": "^5.4.2"
+    },
+    "publishConfig": {
+        "registry": "https://repo.huaweicloud.com/repository/npm/"
+    }
+}
