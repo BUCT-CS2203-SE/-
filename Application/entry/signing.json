@@ -1,0 +1,9 @@
+{
+    "keyAlias": "palmmuseum",
+    "keyPassword": "12345678901234567890123456789012",
+    "keyFile": "../signature/material/palmmuseum.p12",
+    "storePassword": "12345678901234567890123456789012",
+    "profile": "../signature/material/palmmuseum.p7b",
+    "certFile": "../signature/material/palmmuseum.cer",
+    "signAlg": "SHA256withECDSA"
+}
